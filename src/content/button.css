@@ -1,0 +1,32 @@
+.eksi-stories-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 10px;
+  padding: 3px 10px 3px 6px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  color: inherit;
+  font: 600 12px/1.2 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: normal;
+  vertical-align: middle;
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 120ms ease;
+}
+
+.eksi-stories-button:hover {
+  opacity: 1;
+}
+
+.eksi-stories-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.eksi-stories-button svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+}
