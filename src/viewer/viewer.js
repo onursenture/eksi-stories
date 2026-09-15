@@ -35,7 +35,10 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
   const closeButton = el('button', { class: 'es-close', type: 'button', 'aria-label': 'kapat', text: '✕' });
   const top = el('div', { class: 'es-top' }, [
     progress,
-    el('div', { class: 'es-meta' }, [author, date, permalink, el('span', { class: 'es-spacer' }), pageInfo, pausedBadge, closeButton]),
+    el('div', { class: 'es-meta' }, [
+      el('div', { class: 'es-info' }, [author, date, permalink]),
+      el('div', { class: 'es-controls' }, [pageInfo, pausedBadge, closeButton]),
+    ]),
   ]);
   const image = el('img', { class: 'es-image', alt: '', draggable: 'false' });
   const caption = el('div', { class: 'es-caption' });

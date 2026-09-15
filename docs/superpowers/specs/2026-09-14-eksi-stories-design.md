@@ -177,8 +177,11 @@ kilitlenir. `role="dialog"`, `aria-label="story görüntüleyici"`; açılınca 
 - Arka plan: aynı görsel `filter: blur(40px) brightness(.4)` ile sahneyi doldurur.
 - UI katmanları görselin üstüne biner ve görselin çizilen genişliğine hizalanır: üstte
   progress çubukları + yazar/tarih/entry linki + "sayfa N/M" + ✕; altta caption. İkisi de
-  yarı saydam degrade zemin üzerindedir. Katman genişliği `clamp(360px, <görsel genişliği>,
-  min(100vw, 1200px))`.
+  yarı saydam degrade zemin üzerindedir. Katmanlar görselin çizilen genişliğine tam oturur:
+  sol ve sağ kenarları görselin kenarlarıyla aynıdır, alt degrade görselin en altına kadar iner
+  (kullanıcı kararı, 15.09.2026; önceki `clamp(360px, …, 1200px)` kuralı geniş ve dar
+  görsellerde kenarları kaydırıyordu). Dar görsellerde yazar, tarih ve entry linki kısaltılır ya
+  da alt satıra kayar; "sayfa N/M", ❚❚ ve ✕ sağ üstte kalır.
 - Tıklama bölgeleri ve basılı tutma tüm sahneyi kapsar (bulanık alan dahil). Sol %30 = geri,
   sağ %70 = ileri. Linkler ve ✕ tıklama-ile-ilerlemeyi tetiklemez.
 - `ResizeObserver` ile pencere değişince katmanlar yeniden hizalanır.
@@ -258,4 +261,4 @@ manuel test listesi), `.gitignore`, bu spec → `gh repo create onursenture/eksi
 | Görsel çözümleme eşzamanlılığı | 2 |
 | Ardışık boş sayfa limiti | 5 |
 | Toast süresi | 1500 ms |
-| Katman genişliği | clamp(360px, görsel genişliği, min(100vw, 1200px)) |
+| Katman genişliği | görselin çizilen genişliği (kenarlara tam oturur) |
