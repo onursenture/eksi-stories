@@ -78,3 +78,25 @@ test('butona tıklayınca viewer açılır, ilk görsel çözülür, Esc ile kap
   assert.equal(doc.querySelector('eksi-stories-viewer'), null);
   assert.equal(doc.documentElement.style.overflow, '');
 });
+
+test('viewer yeniden açılınca aynı görsel sayfası tekrar istenmez', async () => {
+  const { dom, doc, requests, fetchImpl } = setup([
+    { id: '101', content: link('https://soz.lk/i/aaa111', 'görsel') },
+  ]);
+  await main({ cssUrl: CSS_URL, doc, fetchImpl });
+  doc.querySelector('.eksi-stories-button').click();
+  await flush();
+  await flush();
+
+  dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape' }));
+
+  doc.querySelector('.eksi-stories-button').click();
+  await flush();
+  await flush();
+
+  assert.equal(
+    requests.filter((url) => url === 'https://eksisozluk.com/img/aaa111').length,
+    1,
+  );
+  assert.ok(doc.querySelector('eksi-stories-viewer'), 'viewer yeniden açılmalı');
+});

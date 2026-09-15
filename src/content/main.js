@@ -22,6 +22,9 @@ export async function main({ cssUrl, doc = document, fetchImpl = (url, init) => 
   const title = doc.querySelector('#title[data-id]');
   if (title.querySelector(`.${BUTTON_CLASS}`)) return;
 
+  const parseHtml = (html) => new doc.defaultView.DOMParser().parseFromString(html, 'text/html');
+  const resolver = createResolver({ fetch: fetchImpl, parseHtml });
+
   const { entries } = parseTopicPage(doc);
   const imageCount = entries.reduce((sum, entry) => sum + entry.images.length, 0);
   const button = createButton(doc, imageCount);
@@ -40,6 +43,7 @@ export async function main({ cssUrl, doc = document, fetchImpl = (url, init) => 
         doc,
         fetchImpl,
         cssText,
+        resolver,
         onClose: (lastEntryId) => {
           open = false;
           scrollToEntry(doc, lastEntryId);
@@ -53,10 +57,9 @@ export async function main({ cssUrl, doc = document, fetchImpl = (url, init) => 
   });
 }
 
-function startStories({ doc, fetchImpl, cssText, onClose }) {
+function startStories({ doc, fetchImpl, cssText, resolver, onClose }) {
   const { topic, page, entries } = parseTopicPage(doc);
   const parseHtml = (html) => new doc.defaultView.DOMParser().parseFromString(html, 'text/html');
-  const resolver = createResolver({ fetch: fetchImpl, parseHtml });
   const pageSource = createPageSource({
     fetch: fetchImpl,
     parseHtml,

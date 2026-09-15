@@ -253,9 +253,11 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
 
   function onKeyDown(event) {
     if (event.key === 'Escape') close();
-    else if (event.key === 'ArrowRight') feed.next();
-    else if (event.key === 'ArrowLeft') feed.prev();
-    else if (event.key === ' ' && !isOnControl(event, 'a, button')) {
+    else if (event.key === 'ArrowRight') {
+      if (!event.repeat) feed.next();
+    } else if (event.key === 'ArrowLeft') {
+      if (!event.repeat) feed.prev();
+    } else if (event.key === ' ' && !isOnControl(event, 'a, button')) {
       if (!event.repeat) setPaused('user', !pauseReasons.has('user'));
     } else return;
     event.preventDefault();
