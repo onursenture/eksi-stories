@@ -33,7 +33,7 @@ Gizlilik: Eklenti veri toplamaz, saklamaz ve göndermez. Ek izin istemez; yalnı
 
 Bu eklenti resmi değildir; Ekşi Sözlük ve Ekşi Teknoloji ile bir bağı yoktur. Açık kaynak: https://github.com/onursenture/eksi-stories
 
-**Kategori:** Social Networking (alternatif: Entertainment)
+**Kategori:** Lifestyle > Social Networking (alternatif: Lifestyle > Entertainment)
 
 **Dil:** Türkçe
 
