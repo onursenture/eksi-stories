@@ -1,61 +1,61 @@
-# Stories for Ekşi Sözlük
+# stories for ekşi sözlük
 
-Ekşi Sözlük başlıklarındaki görselleri story tarzında, tam ekran ve otomatik ilerleyen bir
-görüntüleyicide izlemenizi sağlayan Chrome eklentisi.
+ekşi sözlük başlıklarındaki görselleri story tarzında, tam ekran ve otomatik ilerleyen bir
+görüntüleyicide izlemenizi sağlayan chrome eklentisi.
 
-> **Resmi değildir.** Bu proje Ekşi Sözlük ve Ekşi Teknoloji ile bağlantılı değildir.
-> "Ekşi Sözlük" adı yalnızca eklentinin hangi site için olduğunu belirtmek için kullanılır.
+> **resmi değildir.** bu proje ekşi sözlük ve ekşi teknoloji ile bağlantılı değildir.
+> "ekşi sözlük" adı yalnızca eklentinin hangi site için olduğunu belirtmek için kullanılır.
 
-## Özellikler
+## özellikler
 
-- Her başlık sayfasında başlığın yanında **story · N** butonu (N: bu sayfadaki görsel sayısı).
-- Bulunduğunuz sayfadan başlayıp ileri doğru akan story'ler. Sona yaklaşınca sonraki sayfa
+- her başlık sayfasında başlığın yanında **story · n** butonu (n: bu sayfadaki görsel sayısı).
+- bulunduğunuz sayfadan başlayıp ileri doğru akan story'ler. sona yaklaşınca sonraki sayfa
   arka planda, yavaşça yüklenir.
-- Birden fazla görselli entry'ler tek grup olarak gösterilir; üstte her görsel için bir çubuk.
-- Görseller kırpılmaz: dikey, yatay, panorama ya da ekran görüntüsü, her biri kendi oranında.
-- Her story'de yazar, tarih ve entry'ye giden link.
-- Desteklenen görseller: ekşi görselleri (`soz.lk/i/…`, `eksisozluk.com/img/…`) ve
+- birden fazla görselli entry'ler tek grup olarak gösterilir; üstte her görsel için bir çubuk.
+- görseller kırpılmaz: dikey, yatay, panorama ya da ekran görüntüsü, her biri kendi oranında.
+- her story'de yazar, tarih ve entry'ye giden link.
+- desteklenen görseller: ekşi görselleri (`soz.lk/i/…`, `eksisozluk.com/img/…`) ve
   `.jpg`, `.png`, `.gif`, `.webp` ile biten doğrudan linkler.
 
-## Kısayollar
+## kısayollar
 
-| Eylem | Nasıl |
+| eylem | nasıl |
 |---|---|
-| Sonraki / önceki | → / ← ya da ekranın sağına / soluna tıkla |
-| Duraklat | Basılı tut ya da boşluk tuşu |
-| Metnin tamamı | Alttaki metne tıkla |
-| Kapat | Esc ya da ✕ |
+| sonraki / önceki | → / ← ya da ekranın sağına / soluna tıkla |
+| duraklat | basılı tut ya da boşluk tuşu |
+| metnin tamamı | alttaki metne tıkla |
+| kapat | esc ya da ✕ |
 
-## Kurulum (geliştirici modu)
+## kurulum (geliştirici modu)
 
-1. Repoyu indirin: `git clone https://github.com/onursenture/eksi-stories.git`
-2. Chrome'da `chrome://extensions` adresini açın.
-3. Sağ üstten **Geliştirici modu**nu açın.
-4. **Paketlenmemiş öğe yükle** düğmesine basın ve repo klasörünü seçin.
-5. Herhangi bir başlığı açın, örneğin https://eksisozluk.com/anin-fotografi--6459985
+1. repoyu indirin: `git clone https://github.com/onursenture/eksi-stories.git`
+2. chrome'da `chrome://extensions` adresini açın.
+3. sağ üstten **geliştirici modu**nu açın.
+4. **paketlenmemiş öğe yükle** düğmesine basın ve repo klasörünü seçin.
+5. herhangi bir başlığı açın, örneğin https://eksisozluk.com/anin-fotografi--6459985
 
-Kodu değiştirdikten sonra `chrome://extensions` sayfasında eklentinin yenileme düğmesine
+kodu değiştirdikten sonra `chrome://extensions` sayfasında eklentinin yenileme düğmesine
 basın ve ekşi sekmesini yenileyin.
 
-## Kurallara saygı
+## kurallara saygı
 
-- Yalnızca kişisel kullanım içindir; ticari amaç, reklam veya ücret yoktur.
-- Her şey sizin tarayıcınızda ve sizin oturumunuzla çalışır; yalnızca zaten görebildiğiniz
+- yalnızca kişisel kullanım içindir; ticari amaç, reklam veya ücret yoktur.
+- her şey sizin tarayıcınızda ve sizin oturumunuzla çalışır; yalnızca zaten görebildiğiniz
   sayfalar okunur.
-- Siteye yük bindirmemek için istekler sınırlandırılmıştır: sayfa istekleri arasında en az
+- siteye yük bindirmemek için istekler sınırlandırılmıştır: sayfa istekleri arasında en az
   1,5 saniye, aynı anda tek sayfa isteği, görsel sayfası çözümlemede en fazla 2 eşzamanlı istek,
   art arda 5 görselsiz sayfadan sonra durma.
-- Sitenin içeriği, reklamları veya yerleşimi değiştirilmez; yalnızca bir buton ve kapatılınca
+- sitenin içeriği, reklamları veya yerleşimi değiştirilmez; yalnızca bir buton ve kapatılınca
   tamamen kaldırılan bir görüntüleyici eklenir.
-- Her görselde yazara ve entry'ye link verilir.
+- her görselde yazara ve entry'ye link verilir.
 
-## Gizlilik
+## gizlilik
 
-Eklenti veri toplamaz, saklamaz ve göndermez. Ayrıntılar: [PRIVACY.md](PRIVACY.md)
+eklenti veri toplamaz, saklamaz ve göndermez. ayrıntılar: [privacy.md](PRIVACY.md)
 
-## Geliştirme
+## geliştirme
 
-Gereksinim: Node.js 22.22 veya üstü (geliştirme Node 26 ile yapıldı). Build adımı yoktur.
+gereksinim: node.js 22.22 veya üstü (geliştirme node 26 ile yapıldı). build adımı yoktur.
 
 ```bash
 npm install        # yalnızca test için jsdom
@@ -65,33 +65,33 @@ npm run icons      # ikonları yeniden üretir
 npm run package    # dist/eksi-stories-<sürüm>.zip
 ```
 
-Playground, görüntüleyiciyi Ekşi Sözlük'e hiç istek atmadan üretilmiş görsellerle açar
+playground, görüntüleyiciyi ekşi sözlük'e hiç istek atmadan üretilmiş görsellerle açar
 (`?scenario=0` … `?scenario=4`).
 
-| Klasör | İçerik |
+| klasör | içerik |
 |---|---|
-| `src/content/` | Content script yükleyicisi, buton ve bağlantı kodu |
-| `src/core/` | Test edilen saf mantık: ayrıştırma, görsel çözümleme, sayfalama, story akışı |
-| `src/viewer/` | Shadow DOM içinde çizen görüntüleyici |
-| `test/` | `node:test` + jsdom testleri; sentetik ekşi HTML üreticileri |
-| `dev/` | Görüntüleyici playground'u |
-| `store/` | Chrome Web Store metinleri ve görselleri |
-| `docs/superpowers/` | Tasarım dokümanı ve uygulama planı |
+| `src/content/` | content script yükleyicisi, buton ve bağlantı kodu |
+| `src/core/` | test edilen saf mantık: ayrıştırma, görsel çözümleme, sayfalama, story akışı |
+| `src/viewer/` | shadow dom içinde çizen görüntüleyici |
+| `test/` | `node:test` + jsdom testleri; sentetik ekşi html üreticileri |
+| `dev/` | görüntüleyici playground'u |
+| `store/` | chrome web store metinleri ve görselleri |
+| `docs/superpowers/` | tasarım dokümanı ve uygulama planı |
 
-## Manuel test listesi
+## manuel test listesi
 
-- [ ] Paketlenmemiş eklenti hatasız yükleniyor (`chrome://extensions` hata göstermiyor).
-- [ ] Örnek başlıkta buton görünüyor ve görsel sayısı doğru.
-- [ ] Görselsiz bir başlıkta buton `story · 0`; tıklayınca sonraki sayfalar aranıyor.
-- [ ] Tek sayfalı bir başlıkta son story'den sonra `başlığın sonuna geldin` kartı.
+- [ ] paketlenmemiş eklenti hatasız yükleniyor (`chrome://extensions` hata göstermiyor).
+- [ ] örnek başlıkta buton görünüyor ve görsel sayısı doğru.
+- [ ] görselsiz bir başlıkta buton `story · 0`; tıklayınca sonraki sayfalar aranıyor.
+- [ ] tek sayfalı bir başlıkta son story'den sonra `başlığın sonuna geldin` kartı.
 - [ ] `?a=popular` ya da `?a=nice` filtresiyle açılan başlıkta sonraki sayfa aynı filtreyle yükleniyor.
-- [ ] Açık ve koyu temada buton okunaklı.
-- [ ] Klavye (← → boşluk Esc) ve basılı tutarak duraklatma çalışıyor.
-- [ ] Çok dikey, çok geniş ve kare görseller kırpılmadan gösteriliyor.
-- [ ] Pencere yeniden boyutlandırılınca katmanlar görsele hizalı kalıyor.
-- [ ] Kapatınca son izlenen entry mevcut sayfadaysa ona kaydırılıyor.
-- [ ] DevTools Network sekmesinde sayfa istekleri arası en az 1,5 sn.
+- [ ] açık ve koyu temada buton okunaklı.
+- [ ] klavye (← → boşluk esc) ve basılı tutarak duraklatma çalışıyor.
+- [ ] çok dikey, çok geniş ve kare görseller kırpılmadan gösteriliyor.
+- [ ] pencere yeniden boyutlandırılınca katmanlar görsele hizalı kalıyor.
+- [ ] kapatınca son izlenen entry mevcut sayfadaysa ona kaydırılıyor.
+- [ ] devtools network sekmesinde sayfa istekleri arası en az 1,5 sn.
 
-## Lisans
+## lisans
 
-MIT, bkz. [LICENSE](LICENSE).
+mit, bkz. [license](LICENSE).
