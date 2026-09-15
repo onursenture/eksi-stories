@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <title>promo tile 440x280</title>
+  <style>
+    html, body { margin: 0; }
+    body { width: 440px; height: 280px; overflow: hidden; }
+    .tile {
+      display: grid;
+      grid-template-columns: 112px 1fr;
+      align-items: center;
+      gap: 24px;
+      box-sizing: border-box;
+      width: 440px;
+      height: 280px;
+      padding: 28px;
+      background: radial-gradient(circle at 20% 30%, #2d333c, #16191d 70%);
+      color: #fff;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    .ring { width: 112px; height: 112px; }
+    h1 { margin: 0 0 8px; font-size: 26px; line-height: 1.15; }
+    p { margin: 0; font-size: 15px; line-height: 1.35; opacity: 0.85; }
+    small { display: block; margin-top: 14px; font-size: 11px; opacity: 0.6; }
+  </style>
+</head>
+<body>
+  <div class="tile">
+    <svg class="ring" viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.5" fill="none" stroke="#fff" stroke-width="1.2" stroke-dasharray="9 1.2"/>
+      <circle cx="8" cy="8" r="3" fill="#ffd54a"/>
+    </svg>
+    <div>
+      <h1>Stories for Ekşi Sözlük</h1>
+      <p>başlıklardaki görselleri tam ekran, story olarak izle</p>
+      <small>resmi değildir · açık kaynak</small>
+    </div>
+  </div>
+</body>
+</html>
