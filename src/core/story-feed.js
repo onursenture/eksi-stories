@@ -18,6 +18,7 @@ export function createStoryFeed({
   const stories = [];
   const seenEntryIds = new Set();
   const resolving = new WeakSet();
+  const announced = new WeakSet();
   const listeners = { change: new Set(), skipped: new Set() };
   let index = 0;
   let direction = 1;
@@ -112,8 +113,32 @@ export function createStoryFeed({
     if (stories.length - index - 1 < fetchAheadThreshold) fetchNextPage();
   }
 
-  function moveTo(newIndex) {
+  function moveTo(newIndex, isNavigationMove = false) {
+    const oldIdx = index;
     index = newIndex;
+
+    // Check for crossed failed stories (only for navigation moves, not start)
+    if (isNavigationMove) {
+      const step = newIndex > oldIdx ? 1 : -1;
+      const crossedFailed = [];
+      if (step > 0) {
+        for (let i = oldIdx + 1; i < newIndex; i++) {
+          if (stories[i].status === 'failed') crossedFailed.push(stories[i]);
+        }
+      } else if (step < 0) {
+        for (let i = oldIdx - 1; i > newIndex; i--) {
+          if (stories[i].status === 'failed') crossedFailed.push(stories[i]);
+        }
+      }
+
+      // Emit skipped for first unannnounced crossed failed story
+      const unannounced = crossedFailed.find(s => !announced.has(s));
+      if (unannounced) {
+        for (const s of crossedFailed) announced.add(s);
+        emit('skipped', unannounced);
+      }
+    }
+
     ensureAhead();
     emit('change');
   }
@@ -121,23 +146,23 @@ export function createStoryFeed({
   function start() {
     if (started) return;
     started = true;
-    moveTo(forwardFrom(0));
+    moveTo(forwardFrom(0), false);
   }
 
   function next() {
     direction = 1;
-    moveTo(forwardFrom(index + 1));
+    moveTo(forwardFrom(index + 1), true);
   }
 
   function prev() {
     direction = -1;
     const previous = playableFrom(index - 1, -1);
-    moveTo(previous >= 0 ? previous : index);
+    moveTo(previous >= 0 ? previous : index, true);
   }
 
   function goTo(target) {
     direction = 1;
-    moveTo(forwardFrom(Math.min(target, stories.length)));
+    moveTo(forwardFrom(Math.min(target, stories.length)), true);
   }
 
   function markFailed(story) {
@@ -145,8 +170,26 @@ export function createStoryFeed({
     story.status = 'failed';
     story.resolvedUrl = null;
     if (stories[index] === story) {
+      const oldIdx = index;
       const behind = direction < 0 ? playableFrom(index - 1, -1) : -1;
       index = behind >= 0 ? behind : forwardFrom(index + 1);
+
+      // Collect crossed failed stories (including the active story itself)
+      const step = index > oldIdx ? 1 : -1;
+      const crossedFailed = [story];
+      if (step > 0) {
+        for (let i = oldIdx + 1; i < index; i++) {
+          if (stories[i].status === 'failed') crossedFailed.push(stories[i]);
+        }
+      } else if (step < 0) {
+        for (let i = oldIdx - 1; i > index; i--) {
+          if (stories[i].status === 'failed') crossedFailed.push(stories[i]);
+        }
+      }
+
+      // Mark all crossed failed as announced
+      for (const s of crossedFailed) announced.add(s);
+
       emit('skipped', story);
     }
     ensureAhead();

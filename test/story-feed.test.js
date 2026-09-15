@@ -179,6 +179,7 @@ test('başarısız olduğu bilinen story gezinmede atlanır', async () => {
   assert.deepEqual(skipped, []);
   feed.next();
   assert.equal(feed.current().ref.id, 'c');
+  assert.deepEqual(skipped, ['bad']);
 });
 
 test('aktif story başarısız olunca atlanır ve skipped yayılır', async () => {
@@ -190,6 +191,21 @@ test('aktif story başarısız olunca atlanır ve skipped yayılır', async () =
   await flush();
   assert.deepEqual(skipped, ['bad']);
   assert.equal(feed.current().ref.id, 'b');
+});
+
+test('tamamen başarısız grup tek bildirim verir, geri dönünce tekrar bildirilmez', async () => {
+  const { feed } = makeFeed({ entries: [entry('1', ['a']), entry('2', ['bad1', 'bad2']), entry('3', ['c'])], fail: ['bad1', 'bad2'] });
+  const skipped = [];
+  feed.on('skipped', (story) => skipped.push(story.ref.id));
+  feed.start();
+  await flush();
+  assert.deepEqual(skipped, []);
+  feed.next();
+  assert.equal(feed.current().ref.id, 'c');
+  assert.deepEqual(skipped, ['bad1']);
+  feed.prev();
+  assert.equal(feed.current().ref.id, 'a');
+  assert.deepEqual(skipped, ['bad1']);
 });
 
 test('geri giderken başarısız story geriye atlanır; geride yoksa ileri gidilir', () => {
