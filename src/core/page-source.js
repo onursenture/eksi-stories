@@ -40,7 +40,7 @@ export function createPageSource({
   let lastRequestAt = Number.NEGATIVE_INFINITY;
   let queue = Promise.resolve();
   let nextInFlight = null;
-  let nextInFlightPage = 0;
+  let lastResult = null;
 
   async function request(url) {
     const wait = lastRequestAt + minGapMs - now();
@@ -71,17 +71,21 @@ export function createPageSource({
     return parseTopicPage(parseHtml(result.html));
   }
 
-  /** Sayfa isteklerini sıraya sokar: biri bitmeden sonraki başlamaz. */
-  function enqueue(page) {
+  /** Sayfa isteklerini sıraya sokar: biri bitmeden sonraki başlamaz. Aynı sayfaya art arda istek varsa son sonucu döndürür. */
+  function enqueue(pickPageFn) {
     const result = queue.then(async () => {
+      const page = pickPageFn();
+      if (lastResult && lastResult.page === page) return lastResult;
       const parsed = await fetchPage(page);
       lastPage = page;
       if (parsed.page.current !== page) {
         pageCount = page;
-        return { page, count: pageCount, entries: [] };
+        lastResult = { page, count: pageCount, entries: [] };
+        return lastResult;
       }
       pageCount = Math.max(parsed.page.count, page);
-      return { page, count: pageCount, entries: parsed.entries };
+      lastResult = { page, count: pageCount, entries: parsed.entries };
+      return lastResult;
     });
     queue = result.catch(() => {});
     return result;
@@ -91,18 +95,18 @@ export function createPageSource({
 
   function next() {
     if (nextInFlight) return nextInFlight;
-    if (!hasNext()) return Promise.reject(new Error('sonraki sayfa yok'));
-    nextInFlightPage = lastPage + 1;
-    nextInFlight = enqueue(nextInFlightPage).finally(() => {
+    nextInFlight = enqueue(() => {
+      if (!hasNext()) throw new Error('sonraki sayfa yok');
+      return lastPage + 1;
+    }).finally(() => {
       nextInFlight = null;
     });
     return nextInFlight;
   }
 
-  /** İstenen sayfayı yükler; aynı sayfa zaten `next()` ile isteniyorsa o sözü döndürür. */
+  /** İstenen sayfayı yükler; art arda aynı sayfa istenirse bir istek atar. */
   function load(page) {
-    if (nextInFlight && nextInFlightPage === page) return nextInFlight;
-    return enqueue(page);
+    return enqueue(() => page);
   }
 
   return { hasNext, next, load };

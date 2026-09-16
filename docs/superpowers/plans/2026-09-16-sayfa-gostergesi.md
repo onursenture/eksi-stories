@@ -212,6 +212,8 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ### Task 2: Sayfa kaynağında istenen sayfayı yükleme
 
+> Uygulama notu (inceleme sonrası): `next()` sayfasını sırası gelince belirler ve art arda aynı sayfa tek istekle yüklenir; son kod `src/core/page-source.js` ve `test/page-source.test.js`'tedir.
+
 **Files:**
 - Modify: `src/core/page-source.js` (`createPageSource`)
 - Modify: `test/page-source.test.js`

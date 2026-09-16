@@ -100,7 +100,7 @@ Yeni metot: `load(page: number): Promise<{ page, count, entries }>`.
 - Aynı anda tek istek: `load` ve `next` çağrıları sıraya girer; biri bitmeden diğeri başlamaz.
 - Başarıda `lastPage = page` ve `pageCount = Math.max(parsed.count, page)`; böylece `next()` hedef sayfanın ardından devam eder ve `hasNext()` buna göre değişir.
 - `next()` eşzamanlı çağrılarda aynı sözü döndürmeye devam eder.
-- `load(page)`, sürmekte olan `next()` aynı sayfayı istiyorsa yeni istek atmaz, o sözü döndürür. Arka planda yüklenen sayfaya atlanınca sayfa iki kez istenmez.
+- `next()` sayfasını sırası gelince belirler; önünde bir `load` varsa onun ardından devam eder. Sırada art arda aynı sayfa istenirse (arka planda yüklenen sayfaya atlama, çift seçim) yeni istek atılmaz, son sonuç kullanılır.
 
 ### Story akışı (`src/core/story-feed.js`)
 
@@ -203,7 +203,7 @@ Gizlilik formunda `açıklama: entry yazıları, yazar adları, tarihler ve gör
 
 - `test/helpers/eksi-html.js`: `entryHtml` yeni `avatar` parametresi alır (varsayılan `https://img.ekstat.com/profiles/deneme-1.jpg`) ve footer'a gerçek yapıyı ekler: `<div class="avatar-container"><a href="/biri/<nick>"><img class="avatar" src="<avatar>" data-default="//ekstat.com/img/default-profile-picture-dark.svg" alt="<yazar>" title="<yazar>"></a></div>`. `avatar: null` verilirse `avatar-container` eklenmez.
 - `test/entry-parser.test.js`: kişisel avatar mutlak adres olarak okunur; `//ekstat.com/img/default-profile-picture-dark.svg` → `https://ekstat.com/img/default-profile-picture-dark.svg`; `…-light.svg` → koyu sürüm; avatar yoksa `DEFAULT_AVATAR_URL`. Mevcut entry alanı testi `avatarUrl` alanını içerir.
-- `test/page-source.test.js`: `load(3)` doğru adresi ister ve sonrasında `next()` sayfa 4'ü ister; `load` ile `next` arasında 1500 ms aralık; eşzamanlı `load` ve `next` aynı anda tek istek; `load` 5xx'te bir kez tekrar dener; `load` sonrası `hasNext()` güncellenir; sürmekte olan `next()` ile aynı sayfayı isteyen `load` ikinci istek atmaz.
+- `test/page-source.test.js`: `load(3)` doğru adresi ister ve sonrasında `next()` sayfa 4'ü ister; `load` ile `next` arasında 1500 ms aralık; eşzamanlı `load` ve `next` aynı anda tek istek; `load` 5xx'te bir kez tekrar dener; `load` sonrası `hasNext()` güncellenir; sürmekte olan `next()` ile aynı sayfayı isteyen `load` ve art arda iki aynı `load` tek istek atar; `load` sürerken çağrılan `next()` yüklenen sayfanın ardından devam eder.
 - `test/story-feed.test.js`: tampondaki sayfaya ve tampondaki görselsiz sayfaya istek atmadan geçiş; tamponda olmayan sayfaya atlama (`state.page`, `jumping`, kart durumu, sonuçta ilk story); görselsiz hedef sayfadan sonra arama ve hedefin boş sayfa sayacına girmemesi; atlamadan önce başlayan arka plan yüklemesinin sonucunun yok sayılması; art arda üç atlamada yalnızca ilk ve son sayfanın istenmesi; atlama hatası ve `retry()` ile aynı sayfanın yeniden istenmesi; `pagePosition` ve `pageStoryCount` değerleri; sınır dışı sayfanın sıkıştırılması.
 - `test/main.smoke.test.js`: sayaç `1/1`; `.es-avatar` `src` fixture'daki avatar; tek sayfalı başlıkta `.es-pager` gizli; çok sayfalı başlıkta gösterge görünür, açılışta sayfa istenmez ve `»` tıklanınca yalnızca `?p=2` istenir; ikinci sayfaya geçip Esc ile kapatınca `navigate` `…?focusto=<entry id>` ile çağrılır; açılış sayfasındaki entry'de kapatınca `navigate` çağrılmaz.
 

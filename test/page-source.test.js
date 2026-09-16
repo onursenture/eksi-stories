@@ -191,9 +191,35 @@ test('load sürmekte olan next ile aynı sayfayı isterse ikinci istek atılmaz'
   });
   const fromNext = source.next();
   const fromLoad = source.load(2);
-  assert.equal(fromLoad, fromNext);
-  await fromLoad;
+  const [nextResult, loadResult] = await Promise.all([fromNext, fromLoad]);
+  assert.equal(nextResult.page, 2);
+  assert.equal(loadResult.page, 2);
   assert.deepEqual(requests, [`${TOPIC_URL}?p=2`]);
+});
+
+test('load sürerken çağrılan next, yüklenen sayfanın ardından devam eder', async () => {
+  const requests = [];
+  const { source } = makeSource(async (url) => {
+    requests.push(url);
+    const page = Number(new URL(url).searchParams.get('p'));
+    return ok(pageBody(page, 10));
+  }, { current: 3, count: 10 });
+  const [loadResult, nextResult] = await Promise.all([source.load(8), source.next()]);
+  assert.equal(loadResult.page, 8);
+  assert.equal(nextResult.page, 9);
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=8`, `${TOPIC_URL}?p=9`]);
+});
+
+test('aynı sayfaya art arda iki load tek istek atar', async () => {
+  const requests = [];
+  const { source } = makeSource(async (url) => {
+    requests.push(url);
+    return ok(pageBody(5, 5));
+  });
+  const [result1, result2] = await Promise.all([source.load(5), source.load(5)]);
+  assert.equal(result1.page, 5);
+  assert.equal(result2.page, 5);
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=5`]);
 });
 
 test('load 5xx hatasında 5 sn sonra bir kez tekrar dener', async () => {
