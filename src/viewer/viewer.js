@@ -1,4 +1,5 @@
 import {
+  DEFAULT_AVATAR_URL,
   EMPTY_PAGE_LIMIT,
   HOLD_THRESHOLD_MS,
   LEFT_TAP_RATIO,
@@ -27,17 +28,19 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
 
   // --- DOM ---
   const progress = el('div', { class: 'es-progress' });
-  const author = el('a', { class: 'es-author', target: '_blank', rel: 'noopener' });
+  const avatar = el('img', { class: 'es-avatar', alt: '', draggable: 'false' });
+  const authorName = el('span', { class: 'es-author-name' });
+  const author = el('a', { class: 'es-author', target: '_blank', rel: 'noopener' }, [avatar, authorName]);
   const date = el('span', { class: 'es-date' });
   const permalink = el('a', { class: 'es-permalink', target: '_blank', rel: 'noopener', text: "entry'ye git" });
-  const pageInfo = el('span', { class: 'es-page' });
+  const counter = el('span', { class: 'es-counter' });
   const pausedBadge = el('span', { class: 'es-paused', title: 'durdu', text: '❚❚' });
   const closeButton = el('button', { class: 'es-close', type: 'button', 'aria-label': 'kapat', text: '✕' });
   const top = el('div', { class: 'es-top' }, [
     progress,
     el('div', { class: 'es-meta' }, [
       el('div', { class: 'es-info' }, [author, date, permalink]),
-      el('div', { class: 'es-controls' }, [pageInfo, pausedBadge, closeButton]),
+      el('div', { class: 'es-controls' }, [counter, pausedBadge, closeButton]),
     ]),
   ]);
   const image = el('img', { class: 'es-image', alt: '', draggable: 'false' });
@@ -50,6 +53,17 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
   const card = el('div', { class: 'es-card' }, [cardSpinner, cardText, cardActions]);
   const stage = el('div', { class: 'es-stage' }, [frame, spinner, card]);
   const backdrop = el('img', { class: 'es-backdrop', alt: '', 'aria-hidden': 'true' });
+  const pagerPrev = el('button', { class: 'es-pager-prev', type: 'button', title: 'önceki sayfa', text: '«' });
+  const pagerSelect = el('select', { class: 'es-pager-select', 'aria-label': 'sayfa' });
+  const pagerLast = el('button', { class: 'es-pager-last', type: 'button', title: 'son sayfa' });
+  const pagerNext = el('button', { class: 'es-pager-next', type: 'button', title: 'sonraki sayfa', text: '»' });
+  const pager = el('div', { class: 'es-pager' }, [
+    pagerPrev,
+    pagerSelect,
+    el('span', { class: 'es-pager-sep', text: '/' }),
+    pagerLast,
+    pagerNext,
+  ]);
   const toast = el('div', { class: 'es-toast', role: 'status' });
   const root = el('div', {
     class: 'es-root',
@@ -57,9 +71,9 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     'aria-modal': 'true',
     'aria-label': `story: ${topic.title}`,
     tabindex: '-1',
-  }, [backdrop, stage, toast]);
+  }, [backdrop, stage, pager, toast]);
   root.style.setProperty('--es-duration', `${STORY_DURATION_MS}ms`);
-  for (const node of [pausedBadge, spinner, card, toast]) node.hidden = true;
+  for (const node of [pausedBadge, spinner, card, pager, toast]) node.hidden = true;
 
   const host = doc.createElement('eksi-stories-viewer');
   host.attachShadow({ mode: 'open' }).append(el('style', { text: cssText }), root);
@@ -77,6 +91,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
   let held = false;
   let toastTimer = null;
   let closed = false;
+  let pagerCount = null;
 
   const storyKey = (story) => `${story.entry.id}:${story.imageIndex}`;
   const referrerPolicyFor = (story) => (story.ref.kind === 'direct' ? 'no-referrer' : '');
@@ -115,7 +130,9 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     lastEntryId = story.entry.id;
     image.removeAttribute('src');
     frame.classList.add('is-loading');
-    author.textContent = story.entry.author;
+    avatar.hidden = false;
+    avatar.src = story.entry.avatarUrl ?? DEFAULT_AVATAR_URL;
+    authorName.textContent = story.entry.author;
     author.href = story.entry.authorUrl;
     date.textContent = story.entry.date;
     permalink.href = story.entry.permalink;
@@ -170,7 +187,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     let text;
     const actions = [];
     if (state.loading) {
-      text = 'sonraki sayfa yükleniyor…';
+      text = state.jumping ? 'sayfa yükleniyor…' : 'sonraki sayfa yükleniyor…';
     } else if (state.blocked) {
       text = `${EMPTY_PAGE_LIMIT} sayfadır görsel yok`;
       actions.push(actionButton('aramaya devam', () => feed.continueSearching()));
@@ -192,10 +209,30 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     cardActions.replaceChildren(...actions);
   }
 
+  /** Ekşi'nin sayfa göstergesi: « [seçim] / son » — tek sayfalı başlıkta gizli. */
+  function renderPager(state) {
+    const visible = state.pageCount > 1;
+    pager.hidden = !visible;
+    root.classList.toggle('has-pager', visible);
+    if (!visible) return;
+    if (pagerCount !== state.pageCount) {
+      pagerCount = state.pageCount;
+      const options = doc.createDocumentFragment();
+      for (let n = 1; n <= pagerCount; n += 1) options.append(el('option', { value: String(n), text: String(n) }));
+      pagerSelect.replaceChildren(options);
+      pagerLast.textContent = String(pagerCount);
+    }
+    // Açık seçim listesini gereksiz yere sıfırlamamak için yalnızca sayfa değişince yazılır.
+    if (pagerSelect.value !== String(state.page)) pagerSelect.value = String(state.page);
+    pagerPrev.hidden = state.page <= 1;
+    pagerNext.hidden = state.page >= state.pageCount;
+  }
+
   function render() {
     if (closed) return;
     const story = feed.current();
     const state = feed.state;
+    renderPager(state);
     if (!story) {
       renderCard(state);
       return;
@@ -207,7 +244,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     if (key !== shownKey) showStory(story, key);
     if (story.status === 'ready' && loadingUrl !== story.resolvedUrl) loadImage(story, key);
     spinner.hidden = imageLoaded;
-    pageInfo.textContent = `sayfa ${story.page}/${state.pageCount}`;
+    counter.textContent = `${state.pagePosition}/${state.pageStoryCount}`;
     if (imageLoaded) preloadNext();
   }
 
@@ -256,6 +293,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
 
   function onKeyDown(event) {
     if (event.key === 'Escape') close();
+    else if (isOnControl(event, 'select')) return;
     else if (event.key === 'ArrowRight') {
       if (!event.repeat) feed.next();
     } else if (event.key === 'ArrowLeft') {
@@ -268,6 +306,12 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
   }
 
   const onVisibilityChange = () => setPaused('hidden', doc.hidden);
+
+  /** Sayfa değişince odak story ekranına döner; ← → ve boşluk hemen çalışır. */
+  function changePage(pageNumber) {
+    feed.goToPage(pageNumber);
+    root.focus({ preventScroll: true });
+  }
 
   function close() {
     if (closed) return;
@@ -289,6 +333,14 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
   stage.addEventListener('pointerup', onPointerUp);
   stage.addEventListener('pointercancel', onPointerCancel);
   caption.addEventListener('click', () => setExpanded(!expanded));
+  avatar.addEventListener('error', () => {
+    if (avatar.src !== DEFAULT_AVATAR_URL) avatar.src = DEFAULT_AVATAR_URL;
+    else avatar.hidden = true;
+  });
+  pagerSelect.addEventListener('change', () => changePage(Number(pagerSelect.value)));
+  pagerPrev.addEventListener('click', () => changePage(feed.state.page - 1));
+  pagerNext.addEventListener('click', () => changePage(feed.state.page + 1));
+  pagerLast.addEventListener('click', () => changePage(feed.state.pageCount));
   closeButton.addEventListener('click', close);
   progress.addEventListener('animationend', (event) => {
     if (event.animationName === 'es-fill') feed.next();
