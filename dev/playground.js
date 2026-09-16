@@ -25,13 +25,24 @@ function svgImage({ label, w, h }, hue) {
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
 
+/** Tek harfli, renkli, yuvarlak avatar; ekşi'ye istek atılmaz. */
+function avatarImage(name, hue) {
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+<circle cx="24" cy="24" r="24" fill="hsl(${hue} 45% 42%)"/>
+<text x="50%" y="50%" fill="#fff" font-family="system-ui, sans-serif" font-size="24" text-anchor="middle" dominant-baseline="central">${name[0]}</text>
+</svg>`;
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+}
+
 let entrySeq = 1;
 function makeEntry(imageUrls, text = '') {
   const id = String(entrySeq++);
+  const author = `deneme yazar ${id}`;
   return {
     id,
-    author: `deneme yazar ${id}`,
+    author,
     authorUrl: `https://eksisozluk.com/biri/deneme-yazar-${id}`,
+    avatarUrl: avatarImage(author, (Number(id) * 47) % 360),
     date: '14.09.2026 13:28',
     permalink: `https://eksisozluk.com/entry/${id}`,
     text,
@@ -39,30 +50,32 @@ function makeEntry(imageUrls, text = '') {
   };
 }
 
-function fakePageSource(pages, delayMs = 300) {
-  const queue = [...pages];
-  const count = pages.filter((page) => !(page instanceof Error)).length + 1;
+/** Sayfa 1 senaryonun entry'leri, sonrakiler `pages`; `failOnce` sayfaları ilk istekte hata verir. */
+function fakePageSource({ entries, pages = [], failOnce = [], delayMs = 300 }) {
+  const all = [entries, ...pages];
+  const failing = new Set(failOnce);
   let last = 1;
+  async function load(page) {
+    await new Promise((resolve) => setTimeout(resolve, delayMs));
+    if (failing.delete(page)) throw new Error('ağ hatası');
+    last = page;
+    return { page, count: all.length, entries: all[page - 1] ?? [] };
+  }
   return {
-    count,
-    hasNext: () => last < count,
-    async next() {
-      await new Promise((resolve) => setTimeout(resolve, delayMs));
-      const item = queue.shift();
-      if (item instanceof Error) throw item;
-      last += 1;
-      return { page: last, count, entries: item };
-    },
+    count: all.length,
+    hasNext: () => last < all.length,
+    next: () => load(last + 1),
+    load,
   };
 }
 
 const resolver = { resolve: (ref) => Promise.resolve(ref.url) };
 
 const SCENARIOS = [
-  ['en-boy oranları', () => ({
-    entries: SHAPES.map((shape, i) => makeEntry([svgImage(shape, i * 55)], shape.caption)),
-    pages: [],
-  })],
+  ['en-boy oranları', () => {
+    const entries = SHAPES.map((shape, i) => makeEntry([svgImage(shape, i * 55)], shape.caption));
+    return { entries: entries.slice(0, 2), pages: [entries.slice(2, 4), entries.slice(4, 6)] };
+  }],
   ['çoklu görsel + bozuk görsel', () => ({
     entries: [
       makeEntry([svgImage(SHAPES[0], 10), BROKEN_IMAGE, svgImage(SHAPES[2], 200)], 'bayram sabahından üç kare.'),
@@ -81,7 +94,8 @@ const SCENARIOS = [
   })],
   ['sayfa hatası → tekrar dene', () => ({
     entries: [makeEntry([svgImage(SHAPES[1], 60)], 'sonraki sayfa bir kez hata verecek')],
-    pages: [new Error('ağ hatası'), [makeEntry([svgImage(SHAPES[3], 240)], 'tekrar deneyince geldi')]],
+    pages: [[makeEntry([svgImage(SHAPES[3], 240)], 'tekrar deneyince geldi')]],
+    failOnce: [2],
   })],
 ];
 
@@ -94,7 +108,7 @@ SCENARIOS.forEach(([name, build], index) => {
   button.textContent = `${index}: ${name}`;
   button.addEventListener('click', () => {
     const scenario = build();
-    const pageSource = fakePageSource(scenario.pages, scenario.delayMs);
+    const pageSource = fakePageSource(scenario);
     const feed = createStoryFeed({ entries: scenario.entries, page: 1, pageCount: pageSource.count, pageSource, resolver });
     openViewer({
       feed,
