@@ -1057,6 +1057,8 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ### Task 4: Story ekranında avatar - isim, sayaç ve sayfa göstergesi
 
+> Uygulama notu (kullanıcı isteği, 17.09.2026): üst bardaki yazılar ortak taban çizgisine oturur, avatar `vertical-align: middle` ile yazının içinde ortalanır; son CSS `src/viewer/viewer.css`'tedir.
+
 **Files:**
 - Modify: `test/main.smoke.test.js`
 - Modify: `src/viewer/viewer.js` (tamamı aşağıdaki içerikle değişir)

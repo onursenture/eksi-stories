@@ -41,7 +41,7 @@ Gerçek örnekler:
 
 - `a.es-author` linkinin içi: `img.es-avatar` + `span.es-author-name`. Link `href` değeri bugünkü gibi `entry.authorUrl`.
 - `img.es-avatar`: `alt=""`, `src = entry.avatarUrl`. `error` olayında `src` bir kez `DEFAULT_AVATAR_URL` yapılır; o da yüklenemezse görsel gizlenir (`hidden`). Her story değişiminde görsel yeniden gösterilir ve hata sayacı sıfırlanır.
-- CSS: `width: 24px; height: 24px; border-radius: 50%; object-fit: cover; flex: none; background: rgba(255, 255, 255, 0.12)`. `a.es-author` `display: inline-flex; align-items: center; gap: 8px; min-width: 0` olur. İsim `overflow: hidden; text-overflow: ellipsis; white-space: nowrap` ile kısalır; avatar küçülmez.
+- CSS: `width: 24px; height: 24px; margin-right: 8px; border-radius: 50%; object-fit: cover; vertical-align: middle; background: rgba(255, 255, 255, 0.12)`. Avatar yazının içinde durur ve yazıya göre ortalanır. `.es-info` `align-items: baseline` olur: isim, tarih, `entry'ye git` ve sayaç ortak taban çizgisine oturur (kullanıcı isteği, 17.09.2026). Uzun isim `.es-info > *` kuralıyla `…` olarak kısalır; avatar gizlenince boşluğu da kalkar.
 
 ## 4. Sayfa içi sayaç
 

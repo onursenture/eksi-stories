@@ -140,7 +140,7 @@
   flex: 1 1 auto;
   flex-wrap: wrap;
   align-content: center;
-  align-items: center;
+  align-items: baseline;
   gap: 2px 10px;
   min-width: 0;
   min-height: 32px;
@@ -172,26 +172,18 @@
 }
 
 .es-author {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
   font-weight: 600;
 }
 
+/* Avatar yazının içinde durur: isim, tarih ve sayaç ortak taban çizgisinde kalır, avatar yazıya göre ortalanır. */
 .es-avatar {
   width: 24px;
   height: 24px;
-  flex: none;
+  margin-right: 8px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.12);
   object-fit: cover;
-}
-
-.es-author-name {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  vertical-align: middle;
 }
 
 .es-date,
