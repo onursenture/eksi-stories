@@ -1,97 +1,87 @@
 # stories for ekşi sözlük
 
-ekşi sözlük başlıklarındaki görselleri story tarzında, tam ekran ve otomatik ilerleyen bir
-görüntüleyicide izlemenizi sağlayan chrome eklentisi.
+ekşi sözlük başlıklarındaki görselleri story gibi izlemek için chrome eklentisi.
 
-> **resmi değildir.** bu proje ekşi sözlük ve ekşi teknoloji ile bağlantılı değildir.
-> "ekşi sözlük" adı yalnızca eklentinin hangi site için olduğunu belirtmek için kullanılır.
+> resmi değil, ekşi teknoloji ile bağı yok.
 
-## özellikler
+## ne yapar
 
-- her başlık sayfasında başlığın yanında **story · n** butonu (n: bu sayfadaki görsel sayısı).
-- bulunduğunuz sayfadan başlayıp ileri doğru akan story'ler. sona yaklaşınca sonraki sayfa
-  arka planda, yavaşça yüklenir.
-- birden fazla görselli entry'ler tek grup olarak gösterilir; üstte her görsel için bir çubuk.
-- görseller kırpılmaz: dikey, yatay, panorama ya da ekran görüntüsü, her biri kendi oranında.
-- her story'de yazar, tarih ve entry'ye giden link.
-- desteklenen görseller: ekşi görselleri (`soz.lk/i/…`, `eksisozluk.com/img/…`) ve
-  `.jpg`, `.png`, `.gif`, `.webp` ile biten doğrudan linkler.
+- başlığın yanına **story · 12** gibi bir buton koyar. sayı o sayfadaki görsel sayısı.
+- basınca görseller o sayfadan başlayarak tam ekran açılır. bitince sonraki sayfa yavaşça yüklenir.
+- aynı entry'deki görseller art arda gelir, üstte her biri için bir çizgi olur.
+- görselleri kırpmaz. dikey, yatay, panorama, ekran görüntüsü, hepsi kendi oranında.
+- her görselde yazar, tarih ve entry'ye git linki var.
+- ekşi görsellerini (`soz.lk/i/…`, `eksisozluk.com/img/…`) ve `.jpg`, `.png`, `.gif`, `.webp` linklerini açar.
 
 ## kısayollar
 
-| eylem | nasıl |
+| ne | nasıl |
 |---|---|
 | sonraki / önceki | → / ← ya da ekranın sağına / soluna tıkla |
-| duraklat | basılı tut ya da boşluk tuşu |
-| metnin tamamı | alttaki metne tıkla |
+| durdur | basılı tut ya da boşluk |
+| entry'nin tamamı | alttaki yazıya tıkla |
 | kapat | esc ya da ✕ |
 
-## kurulum (geliştirici modu)
+## kurulum
 
-1. repoyu indirin: `git clone https://github.com/onursenture/eksi-stories.git`
-2. chrome'da `chrome://extensions` adresini açın.
-3. sağ üstten **geliştirici modu**nu açın.
-4. **paketlenmemiş öğe yükle** düğmesine basın ve repo klasörünü seçin.
-5. herhangi bir başlığı açın, örneğin https://eksisozluk.com/anin-fotografi--6459985
+1. repoyu indir: `git clone https://github.com/onursenture/eksi-stories.git`
+2. chrome'da `chrome://extensions` sayfasını aç.
+3. sağ üstten **geliştirici modu**nu aç.
+4. **paketlenmemiş öğe yükle**'ye bas, repo klasörünü seç.
+5. bir başlık aç, mesela https://eksisozluk.com/anin-fotografi--6459985
 
-kodu değiştirdikten sonra `chrome://extensions` sayfasında eklentinin yenileme düğmesine
-basın ve ekşi sekmesini yenileyin.
+kod değişince `chrome://extensions` sayfasında eklentiyi yenile, sonra ekşi sekmesini yenile.
 
-## kurallara saygı
+## kurallar
 
-- yalnızca kişisel kullanım içindir; ticari amaç, reklam veya ücret yoktur.
-- her şey sizin tarayıcınızda ve sizin oturumunuzla çalışır; yalnızca zaten görebildiğiniz
-  sayfalar okunur.
-- siteye yük bindirmemek için istekler sınırlandırılmıştır: sayfa istekleri arasında en az
-  1,5 saniye, aynı anda tek sayfa isteği, görsel sayfası çözümlemede en fazla 2 eşzamanlı istek,
-  art arda 5 görselsiz sayfadan sonra durma.
-- sitenin içeriği, reklamları veya yerleşimi değiştirilmez; yalnızca bir buton ve kapatılınca
-  tamamen kaldırılan bir görüntüleyici eklenir.
-- her görselde yazara ve entry'ye link verilir.
+- sadece kişisel kullanım için. reklam, ücret, ticari amaç yok.
+- senin tarayıcında, senin oturumunla çalışır. sadece zaten görebildiğin sayfaları okur.
+- siteyi yormaz: sayfa istekleri arasında en az 1,5 saniye bekler, aynı anda tek sayfa ister, görsel sayfalarını en fazla ikişer açar, 5 görselsiz sayfadan sonra durur.
+- sitenin yazılarına, reklamlarına, düzenine dokunmaz. sadece bir buton ve kapatınca kaybolan bir ekran ekler.
+- her görselde yazara ve entry'ye link verir.
 
 ## gizlilik
 
-eklenti veri toplamaz, saklamaz ve göndermez. ayrıntılar: [privacy.md](PRIVACY.md)
+veri toplamaz, saklamaz, göndermez. ayrıntı: [privacy.md](PRIVACY.md)
 
 ## geliştirme
 
-gereksinim: node.js 22.22 veya üstü (geliştirme node 26 ile yapıldı). build adımı yoktur.
+node.js 22.22 ya da üstü lazım. build adımı yok.
 
 ```bash
-npm install        # yalnızca test için jsdom
-npm test           # birim ve smoke testleri
+npm install        # sadece testler için jsdom
+npm test           # testler
 npm run serve      # http://127.0.0.1:5173/dev/playground.html
-npm run icons      # ikonları yeniden üretir
+npm run icons      # ikonları yeniden üret
 npm run package    # dist/eksi-stories-<sürüm>.zip
 ```
 
-playground, görüntüleyiciyi ekşi sözlük'e hiç istek atmadan üretilmiş görsellerle açar
-(`?scenario=0` … `?scenario=4`).
+playground ekşi'ye hiç istek atmadan sahte görsellerle açılır: `?scenario=0` … `?scenario=4`.
 
-| klasör | içerik |
+| klasör | içinde |
 |---|---|
-| `src/content/` | content script yükleyicisi, buton ve bağlantı kodu |
-| `src/core/` | test edilen saf mantık: ayrıştırma, görsel çözümleme, sayfalama, story akışı |
-| `src/viewer/` | shadow dom içinde çizen görüntüleyici |
-| `test/` | `node:test` + jsdom testleri; sentetik ekşi html üreticileri |
-| `dev/` | görüntüleyici playground'u |
-| `store/` | chrome web store metinleri ve görselleri |
-| `docs/superpowers/` | tasarım dokümanı ve uygulama planı |
+| `src/content/` | sayfaya eklenen kod ve buton |
+| `src/core/` | testli mantık: sayfa okuma, görsel bulma, sayfalama, story akışı |
+| `src/viewer/` | story ekranı |
+| `test/` | testler ve sahte ekşi sayfaları |
+| `dev/` | playground |
+| `store/` | chrome web store yazıları ve görselleri |
+| `docs/superpowers/` | tasarım ve plan |
 
-## manuel test listesi
+## elle test
 
-- [ ] paketlenmemiş eklenti hatasız yükleniyor (`chrome://extensions` hata göstermiyor).
-- [ ] örnek başlıkta buton görünüyor ve görsel sayısı doğru.
-- [ ] görselsiz bir başlıkta buton `story · 0`; tıklayınca sonraki sayfalar aranıyor.
-- [ ] tek sayfalı bir başlıkta son story'den sonra `başlığın sonuna geldin` kartı.
-- [ ] `?a=popular` ya da `?a=nice` filtresiyle açılan başlıkta sonraki sayfa aynı filtreyle yükleniyor.
-- [ ] açık ve koyu temada buton okunaklı.
-- [ ] klavye (← → boşluk esc) ve basılı tutarak duraklatma çalışıyor.
-- [ ] çok dikey, çok geniş ve kare görseller kırpılmadan gösteriliyor.
-- [ ] pencere yeniden boyutlandırılınca katmanlar görsele hizalı kalıyor.
-- [ ] kapatınca son izlenen entry mevcut sayfadaysa ona kaydırılıyor.
-- [ ] devtools network sekmesinde sayfa istekleri arası en az 1,5 sn.
+- [ ] eklenti hatasız yükleniyor.
+- [ ] örnek başlıkta buton var, görsel sayısı doğru.
+- [ ] görselsiz başlıkta buton `story · 0`, basınca sonraki sayfalara bakıyor.
+- [ ] tek sayfalık başlıkta son görselden sonra `başlıkta başka görsel yok` çıkıyor.
+- [ ] `?a=popular` ya da `?a=nice` ile açılan başlıkta sonraki sayfa aynı filtreyle geliyor.
+- [ ] açık ve koyu temada buton okunuyor.
+- [ ] ← → boşluk esc ve basılı tutma çalışıyor.
+- [ ] dikey, yatay ve kare görseller kırpılmadan görünüyor.
+- [ ] pencere boyu değişince yazılar görselin kenarlarına oturuyor.
+- [ ] kapatınca son bakılan entry sayfadaysa oraya kayıyor.
+- [ ] devtools network'te sayfa istekleri arası en az 1,5 sn.
 
 ## lisans
 
-mit, bkz. [license](LICENSE).
+mit, bkz: [license](LICENSE)

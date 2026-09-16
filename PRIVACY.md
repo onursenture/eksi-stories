@@ -1,36 +1,29 @@
-# Gizlilik Politikası: Stories for Ekşi Sözlük
+# gizlilik: stories for ekşi sözlük
 
-Son güncelleme: 15.09.2026
+son güncelleme: 16.09.2026
 
-Stories for Ekşi Sözlük ("eklenti") kişisel veri toplamaz, satmaz ve üçüncü taraflarla paylaşmaz.
+stories for ekşi sözlük kişisel veri toplamaz, satmaz, kimseyle paylaşmaz.
 
-## Eklentinin eriştiği veriler
+## neye bakar
 
-- Eklenti yalnızca `https://eksisozluk.com` sayfalarında çalışır.
-- Açık olan başlık sayfasındaki web sitesi içeriğini (entry metinleri, yazar adları, tarihler ve
-  görsel linkleri) okur ve görselleri tam ekran bir görüntüleyicide gösterir.
-- Görüntüleyici ilerledikçe aynı başlığın sonraki sayfalarını ve ekşi görsel sayfalarını
-  (`/img/…`) sizin tarayıcınızdan, sizin oturumunuzla eksisozluk.com'dan ister. Bu istekler, o
-  sayfaları kendiniz açtığınızda yapılan isteklerle aynıdır.
+- sadece `https://eksisozluk.com` sayfalarında çalışır.
+- açık başlık sayfasındaki entry yazılarını, yazar adlarını, tarihleri ve görsel linklerini okur, görselleri tam ekran gösterir.
+- ilerledikçe aynı başlığın sonraki sayfalarını ve ekşi görsel sayfalarını (`/img/…`) senin tarayıcından, senin oturumunla eksisozluk.com'dan ister. bu istekler o sayfaları kendin açınca gidenlerle aynı.
 
-## Verilerin işlenmesi ve saklanması
+## nerede tutar
 
-- Okunan içerik yalnızca cihazınızda, sekme açıkken bellekte işlenir. Sekme kapanınca ya da
-  sayfa yenilenince silinir.
-- Çerez, `localStorage` veya eklenti depolama alanı kullanılmaz.
-- Eklentinin bir sunucusu yoktur. Analitik, izleme, reklam veya telemetri yoktur. Hiçbir veri
-  geliştiriciye ya da başka bir tarafa gönderilmez.
+- okuduklarını sadece senin cihazında, sekme açıkken bellekte tutar. sekme kapanınca ya da sayfa yenilenince siler.
+- çerez, `localStorage` ya da eklenti depolaması kullanmaz.
+- sunucusu yok. analitik, takip, reklam yok. hiçbir veri geliştiriciye ya da başkasına gitmez.
 
-## Üçüncü taraf görseller
+## başka sitelerdeki görseller
 
-Bir entry doğrudan başka bir sitedeki görsele (ör. `https://ornek.com/foto.jpg`) link veriyorsa
-görüntüleyici görseli o siteden yükler. Bu durumda o site, sıradan bir görsel isteğinde olduğu
-gibi IP adresinizi görebilir. Eklenti bu isteklerde referrer bilgisi göndermez.
+bir entry başka bir sitedeki görsele link veriyorsa (mesela `https://ornek.com/foto.jpg`) görsel o siteden yüklenir. o site, her görsel isteğinde olduğu gibi ip adresini görebilir. eklenti bu isteklere referrer eklemez.
 
-## İzinler
+## izinler
 
-Eklenti ek izin istemez. Yalnızca eksisozluk.com sayfalarına içerik betiği olarak eklenir.
+ek izin istemez. sadece eksisozluk.com sayfalarına eklenir.
 
-## İletişim
+## iletişim
 
-Sorular ve bildirimler için: https://github.com/onursenture/eksi-stories/issues
+soru ve bildirimler: https://github.com/onursenture/eksi-stories/issues

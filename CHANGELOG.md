@@ -1,7 +1,5 @@
-# Değişiklik Günlüğü
+# değişiklikler
 
 ## 0.1.0 (yayınlanmadı)
 
-- İlk sürüm: başlık sayfalarında story butonu; serbest en-boy oranlı tam ekran görüntüleyici;
-  sonraki sayfaları sınırlı hızda okuma; ekşi görselleri (`soz.lk`, `/img`) ve doğrudan görsel
-  linkleri; yazar, tarih ve entry linki ile atıf.
+- ilk sürüm. başlıklarda story butonu, görselleri kırpmadan tam ekran açan story ekranı, sonraki sayfalara yavaş geçiş, ekşi görselleri (`soz.lk`, `/img`) ve direkt görsel linkleri, her görselde yazar, tarih ve entry linki.
