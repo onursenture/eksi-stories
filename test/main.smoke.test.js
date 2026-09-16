@@ -144,3 +144,31 @@ test('çok sayfalı başlıkta sayfa kutusu görünür, » sonraki sayfayı aça
   assert.equal(shadow.querySelector('.es-pager-prev').hidden, false);
   assert.equal(shadow.querySelector('.es-counter').textContent, '1/4');
 });
+
+test('başka sayfadayken kapatınca son bakılan entry focusto adresiyle açılır', async () => {
+  const { dom, doc, fetchImpl } = setup(pageEntries(1), { count: 3, pages: { 2: pageEntries(2) } });
+  const navigations = [];
+  await main({ cssUrl: CSS_URL, doc, fetchImpl, navigate: (url) => navigations.push(url) });
+  doc.querySelector('.eksi-stories-button').click();
+  await flush();
+  await flush();
+  doc.querySelector('eksi-stories-viewer').shadowRoot.querySelector('.es-pager-next').click();
+  for (let i = 0; i < 4; i += 1) await flush();
+
+  dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape' }));
+  assert.equal(doc.querySelector('eksi-stories-viewer'), null);
+  assert.deepEqual(navigations, [`${PAGE_URL}?focusto=201`]);
+});
+
+test("açılış sayfasındaki entry'de kapatınca başka adrese gidilmez", async () => {
+  const { dom, doc, fetchImpl } = setup(pageEntries(1), { count: 3 });
+  const navigations = [];
+  await main({ cssUrl: CSS_URL, doc, fetchImpl, navigate: (url) => navigations.push(url) });
+  doc.querySelector('.eksi-stories-button').click();
+  await flush();
+  await flush();
+
+  dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape' }));
+  assert.deepEqual(navigations, []);
+  assert.equal(doc.activeElement, doc.querySelector('.eksi-stories-button'));
+});

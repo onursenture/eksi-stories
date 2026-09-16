@@ -10,9 +10,14 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
  * Content script giriş noktası; loader.js çağırır. chrome.* API'sine bağımlı değildir.
- * @param {{ cssUrl: string, doc?: Document, fetchImpl?: (url: string, init?: object) => Promise<Response> }} options
+ * @param {{ cssUrl: string, doc?: Document, fetchImpl?: (url: string, init?: object) => Promise<Response>, navigate?: (url: string) => void }} options
  */
-export async function main({ cssUrl, doc = document, fetchImpl = (url, init) => globalThis.fetch(url, init) }) {
+export async function main({
+  cssUrl,
+  doc = document,
+  fetchImpl = (url, init) => globalThis.fetch(url, init),
+  navigate = (url) => doc.defaultView.location.assign(url),
+}) {
   if (!isTopicPage(doc)) {
     if (TOPIC_PATH.test(doc.location.pathname)) {
       console.warn('[eksi-stories] başlık sayfası tanınmadı, buton eklenmedi.');
@@ -46,7 +51,11 @@ export async function main({ cssUrl, doc = document, fetchImpl = (url, init) => 
         resolver,
         onClose: (lastEntryId) => {
           open = false;
-          scrollToEntry(doc, lastEntryId);
+          if (lastEntryId && !scrollToEntry(doc, lastEntryId)) {
+            // Entry başka sayfada: ekşi o entry'nin sayfasını açıp ona kaydırır.
+            navigate(`${doc.location.origin}${doc.location.pathname}?focusto=${encodeURIComponent(lastEntryId)}`);
+            return;
+          }
           button.focus({ preventScroll: true });
         },
       });
@@ -105,9 +114,11 @@ function createButton(doc, count) {
   return button;
 }
 
+/** Entry açık sayfadaysa ona kaydırır ve true döner. */
 function scrollToEntry(doc, entryId) {
-  if (!entryId) return;
   const items = doc.querySelectorAll('#entry-item-list > li[data-id]');
   const item = Array.from(items).find((li) => li.getAttribute('data-id') === entryId);
-  item?.scrollIntoView?.({ block: 'center' });
+  if (!item) return false;
+  item.scrollIntoView?.({ block: 'center' });
+  return true;
 }
