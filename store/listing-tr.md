@@ -21,7 +21,10 @@ görsel paylaşılan başlıkları sayfa sayfa gezmek yerine story gibi izle.
 • görseller bitmeye yakın sonraki sayfa yavaşça yüklenir, siteyi yormaz.
 • aynı entry'deki görseller art arda gelir.
 • görseller kırpılmaz, her biri kendi oranında görünür.
-• her görselde yazar, tarih ve entry'ye git linki var.
+• her görselde yazarın avatarı ve adı, tarih ve entry'ye git linki var.
+• üstte o sayfada kaçıncı görselde olduğun yazar, mesela 5/12.
+• sağ üstten istediğin sayfaya geç.
+• kapatınca son baktığın entry'ye gidersin.
 
 kısayollar: → ← ile geç, boşlukla ya da basılı tutarak durdur, esc ile kapat.
 
@@ -54,7 +57,7 @@ sadece eksisozluk.com başlık sayfalarına bir buton ekler. basılınca aynı s
 **uzak kod:** hayır. bütün kod paketin içinde, dinamik import sadece paketteki dosyaları yükler.
 
 **veri kullanımı:**
-- işaretlenecek tür: **website content**. açıklama: entry yazıları, yazar adları, tarihler ve görsel linkleri sadece story ekranı için cihazda, bellekte işlenir. saklanmaz, cihaz dışına gitmez.
+- işaretlenecek tür: **website content**. açıklama: entry yazıları, yazar adları ve avatarları, tarihler ve görsel linkleri sadece story ekranı için cihazda, bellekte işlenir. saklanmaz, cihaz dışına gitmez.
 - başka tür işaretlenmez.
 - üç onay kutusu da işaretlenir: veri satılmaz ya da devredilmez, tek amaç dışında kullanılmaz, kredi ya da borç kararı için kullanılmaz.
 

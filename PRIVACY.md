@@ -7,7 +7,7 @@ stories for ekşi sözlük kişisel veri toplamaz, satmaz, kimseyle paylaşmaz.
 ## neye bakar
 
 - sadece `https://eksisozluk.com` sayfalarında çalışır.
-- açık başlık sayfasındaki entry yazılarını, yazar adlarını, tarihleri ve görsel linklerini okur, görselleri tam ekran gösterir.
+- açık başlık sayfasındaki entry yazılarını, yazar adlarını ve avatarlarını, tarihleri ve görsel linklerini okur, görselleri tam ekran gösterir. avatarlar ekşi'nin görsel sunucusundan yüklenir.
 - ilerledikçe aynı başlığın sonraki sayfalarını ve ekşi görsel sayfalarını (`/img/…`) senin tarayıcından, senin oturumunla eksisozluk.com'dan ister. bu istekler o sayfaları kendin açınca gidenlerle aynı.
 
 ## nerede tutar
