@@ -53,6 +53,41 @@ function makeFeed({ entries, results = [], count = 1, fail = [] }) {
   return { feed, resolver, pageSource };
 }
 
+/** pages: { [sayfa]: entry dizisi }; failures: { [sayfa]: kaç kez ağ hatası }; structure: yapı hatası verecek sayfalar */
+function fakeJumpSource({ count, pages = {}, failures = {}, structure = [] }) {
+  let last = 1;
+  const loads = [];
+  const nexts = [];
+  const respond = async (pageNumber) => {
+    if (structure.includes(pageNumber)) throw new PageStructureError();
+    if ((failures[pageNumber] ?? 0) > 0) {
+      failures[pageNumber] -= 1;
+      throw new Error('ağ');
+    }
+    last = pageNumber;
+    return { page: pageNumber, count, entries: pages[pageNumber] ?? [] };
+  };
+  return {
+    loads,
+    nexts,
+    hasNext: () => last < count,
+    next() {
+      nexts.push(last + 1);
+      return respond(last + 1);
+    },
+    load(pageNumber) {
+      loads.push(pageNumber);
+      return respond(pageNumber);
+    },
+  };
+}
+
+function makeJumpFeed({ entries, count, pages, failures, structure }) {
+  const pageSource = fakeJumpSource({ count, pages, failures, structure });
+  const feed = createStoryFeed({ entries, page: 1, pageCount: count, pageSource, resolver: fakeResolver() });
+  return { feed, pageSource };
+}
+
 test("entry'nin görselleri tek grup olarak story'lere dönüşür", () => {
   const { feed } = makeFeed({ entries: [entry('1', ['a', 'b']), entry('2'), entry('3', ['c'])] });
   feed.start();
@@ -261,4 +296,172 @@ test('change bildirilir; dispose sonrası olay yayılmaz', async () => {
   feed.next();
   await flush();
   assert.equal(changes, before);
+});
+
+test('tampondaki sayfaya atlamak istek atmaz', async () => {
+  const { feed, pageSource } = makeJumpFeed({
+    entries: [entry('1', ['a', 'b'])],
+    count: 3,
+    pages: { 2: [entry('2', ['c', 'd'])], 3: [entry('3', ['e', 'f', 'g', 'h'])] },
+  });
+  feed.start();
+  await flush();
+  assert.deepEqual(pageSource.nexts, [2]);
+  feed.goToPage(2);
+  assert.equal(feed.current().ref.id, 'c');
+  assert.equal(feed.state.page, 2);
+  assert.deepEqual(pageSource.loads, []);
+});
+
+test('tampondaki görselsiz sayfaya atlamak istek atmaz, sonraki görsele geçer', async () => {
+  const { feed, pageSource } = makeJumpFeed({
+    entries: [entry('1', ['a', 'b', 'c', 'd'])],
+    count: 3,
+    pages: { 2: [entry('2')], 3: [entry('3', ['e'])] },
+  });
+  feed.start();
+  feed.goTo(3);
+  await flush();
+  assert.deepEqual(pageSource.nexts, [2, 3]);
+  feed.goToPage(2);
+  assert.equal(feed.current().ref.id, 'e');
+  assert.equal(feed.state.page, 3);
+  assert.deepEqual(pageSource.loads, []);
+});
+
+test('tamponda olmayan sayfaya atlarken yalnızca o sayfa istenir', async () => {
+  const { feed, pageSource } = makeJumpFeed({
+    entries: [entry('1', ['a', 'b', 'c', 'd'])],
+    count: 9,
+    pages: { 6: [entry('6', ['x', 'y', 'z', 'w'])] },
+  });
+  feed.start();
+  feed.goToPage(6);
+  assert.equal(feed.current(), null);
+  assert.equal(feed.state.jumping, true);
+  assert.equal(feed.state.loading, true);
+  assert.equal(feed.state.page, 6);
+  await flush();
+  assert.deepEqual(pageSource.loads, [6]);
+  assert.deepEqual(pageSource.nexts, []);
+  assert.equal(feed.state.jumping, false);
+  assert.equal(feed.state.loading, false);
+  assert.equal(feed.current().ref.id, 'x');
+  assert.equal(feed.state.page, 6);
+  assert.equal(feed.state.length, 4);
+});
+
+test('görselsiz hedef sayfadan sonra arama sürer ve hedef boş sayfa sayılmaz', async () => {
+  const { feed, pageSource } = makeJumpFeed({ entries: [entry('1', ['a', 'b', 'c', 'd'])], count: 20 });
+  feed.start();
+  feed.goToPage(3);
+  for (let i = 0; i < 8; i += 1) await flush();
+  assert.deepEqual(pageSource.loads, [3]);
+  assert.deepEqual(pageSource.nexts, [4, 5, 6, 7, 8]);
+  assert.equal(feed.state.blocked, true);
+});
+
+test('atlamadan önce başlayan arka plan yüklemesinin sonucu yok sayılır', async () => {
+  const { feed, pageSource } = makeJumpFeed({
+    entries: [entry('1', ['a'])],
+    count: 9,
+    pages: { 2: [entry('2', ['b'])], 7: [entry('7', ['g', 'h', 'i', 'j'])] },
+  });
+  feed.start();
+  assert.deepEqual(pageSource.nexts, [2]);
+  feed.goToPage(7);
+  await flush();
+  assert.equal(feed.state.length, 4);
+  assert.equal(feed.current().entry.id, '7');
+  assert.equal(feed.state.page, 7);
+  assert.equal(feed.state.loading, false);
+});
+
+test('art arda atlamada yalnızca sürmekte olan ve en son hedef istenir', async () => {
+  const { feed, pageSource } = makeJumpFeed({
+    entries: [entry('1', ['a', 'b', 'c', 'd'])],
+    count: 9,
+    pages: { 5: [entry('5', ['e', 'f', 'g', 'h'])] },
+  });
+  feed.start();
+  feed.goToPage(3);
+  feed.goToPage(4);
+  feed.goToPage(5);
+  for (let i = 0; i < 4; i += 1) await flush();
+  assert.deepEqual(pageSource.loads, [3, 5]);
+  assert.equal(feed.current().entry.id, '5');
+  assert.equal(feed.state.page, 5);
+});
+
+test('atlama hatasında tekrar dene aynı sayfayı yeniden ister', async () => {
+  const { feed, pageSource } = makeJumpFeed({
+    entries: [entry('1', ['a', 'b', 'c', 'd'])],
+    count: 9,
+    pages: { 4: [entry('4', ['p', 'q', 'r', 's'])] },
+    failures: { 4: 1 },
+  });
+  feed.start();
+  feed.goToPage(4);
+  await flush();
+  assert.equal(feed.state.errorKind, 'fetch');
+  assert.equal(feed.state.jumping, false);
+  assert.equal(feed.state.page, 4);
+  feed.retry();
+  await flush();
+  assert.deepEqual(pageSource.loads, [4, 4]);
+  assert.equal(feed.state.errorKind, null);
+  assert.equal(feed.current().entry.id, '4');
+});
+
+test('atlamada sayfa okunamazsa structure hatası verir ve tekrar dene etkisizdir', async () => {
+  const { feed, pageSource } = makeJumpFeed({
+    entries: [entry('1', ['a', 'b', 'c', 'd'])],
+    count: 9,
+    structure: [8],
+  });
+  feed.start();
+  feed.goToPage(8);
+  await flush();
+  assert.equal(feed.state.errorKind, 'structure');
+  feed.retry();
+  await flush();
+  assert.deepEqual(pageSource.loads, [8]);
+});
+
+test('sayaç sayfa içinde sayar ve yeni sayfada birden başlar', async () => {
+  const { feed } = makeJumpFeed({
+    entries: [entry('1', ['a', 'b']), entry('2', ['c'])],
+    count: 2,
+    pages: { 2: [entry('3', ['d'])] },
+  });
+  feed.start();
+  await flush();
+  const counter = () => [feed.state.pagePosition, feed.state.pageStoryCount, feed.state.page];
+  assert.deepEqual(counter(), [1, 3, 1]);
+  feed.next();
+  assert.deepEqual(counter(), [2, 3, 1]);
+  feed.next();
+  assert.deepEqual(counter(), [3, 3, 1]);
+  feed.next();
+  assert.deepEqual(counter(), [1, 1, 2]);
+  feed.next();
+  assert.deepEqual([feed.state.pagePosition, feed.state.pageStoryCount, feed.state.page], [null, null, 2]);
+});
+
+test('sınır dışı sayfa numarası sayfa aralığına sıkıştırılır', async () => {
+  const { feed, pageSource } = makeJumpFeed({
+    entries: [entry('1', ['a', 'b', 'c', 'd'])],
+    count: 5,
+    pages: { 5: [entry('5', ['e'])] },
+  });
+  feed.start();
+  feed.goToPage(99);
+  await flush();
+  assert.deepEqual(pageSource.loads, [5]);
+  feed.goToPage(-3);
+  await flush();
+  assert.deepEqual(pageSource.loads, [5, 1]);
+  feed.goToPage(Number.NaN);
+  await flush();
+  assert.deepEqual(pageSource.loads, [5, 1]);
 });
