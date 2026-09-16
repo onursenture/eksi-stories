@@ -1,7 +1,7 @@
 # sayfa göstergesi, sayaç ve avatar: tasarım
 
 Tarih: 2026-09-16
-Durum: Bölümler kullanıcıyla onaylandı, spec incelemesi bekliyor
+Durum: Onaylandı. Plan yazılırken §5, §6 ve §9 netleştirildi: tampondaki görselsiz sayfalar, aynı sayfanın iki kez istenmemesi, odak ve başarısız atlama.
 
 ## 1. Kararlar
 
@@ -86,7 +86,8 @@ Gerçek örnekler:
 - `select` değişince: `feed.goToPage(Number(select.value))`.
 - `«`: `feed.goToPage(state.page - 1)`; `»`: `feed.goToPage(state.page + 1)`; son sayfa kutusu: `feed.goToPage(state.pageCount)`.
 - Gösterge `state.page` değerini gösterir (bkz. §6).
-- `.es-pager` dokunma ve basılı tutma bölgesinin dışındadır: `INTERACTIVE_SELECTOR` listesine `.es-pager` eklenir.
+- `.es-pager` `.es-stage`'in kardeşidir; dokunma ve basılı tutma olayları ona ulaşmaz.
+- Gösterge ile sayfa değişince odak story ekranına (`.es-root`) döner; ← → ve boşluk hemen çalışır.
 - Klavye kısayolları (← → boşluk) olay yolunda `select` varken çalışmaz; seçim kutusu okları kendisi kullanır. Esc her zaman kapatır.
 
 ## 6. Sayfa atlama ve istek kuralları
@@ -99,27 +100,28 @@ Yeni metot: `load(page: number): Promise<{ page, count, entries }>`.
 - Aynı anda tek istek: `load` ve `next` çağrıları sıraya girer; biri bitmeden diğeri başlamaz.
 - Başarıda `lastPage = page` ve `pageCount = Math.max(parsed.count, page)`; böylece `next()` hedef sayfanın ardından devam eder ve `hasNext()` buna göre değişir.
 - `next()` eşzamanlı çağrılarda aynı sözü döndürmeye devam eder.
+- `load(page)`, sürmekte olan `next()` aynı sayfayı istiyorsa yeni istek atmaz, o sözü döndürür. Arka planda yüklenen sayfaya atlanınca sayfa iki kez istenmez.
 
 ### Story akışı (`src/core/story-feed.js`)
 
 Yeni metot: `goToPage(page: number): void`.
 
 1. `page` 1 ile `pageCount` arasına sıkıştırılır.
-2. Tamponda `story.page === page` olan story varsa: aktif index o sayfanın ilk oynatılabilir story'si olur, yön ileri, `ensureAhead()`, `change` yayılır. İstek atılmaz.
+2. Sayfa tamponun kapsadığı sayfalar arasındaysa (tampon her zaman ardışık sayfaları tutar, görselsiz sayfalar dahil): aktif index o sayfanın, görselsizse sonraki sayfaların ilk oynatılabilir story'si olur, yön ileri, `ensureAhead()`, `change` yayılır. İstek atılmaz.
 3. Yoksa atlama başlar:
-   - `epoch` bir artar; bekleyen arka plan yüklemesi ve önceki atlamanın sonucu bundan sonra yok sayılır.
-   - `jumpTarget = page`, `loading = true`, `jumping = true`, `blocked = false`, `errorKind = null`, `emptyStreak = 0`. Tampon (story'ler, görülen entry'ler, bildirilen başarısızlar) temizlenir, index 0 olur. `change` yayılır.
-   - Başka bir `load` çağrısı sürüyorsa yeni istek başlatılmaz; biten çağrı en son `jumpTarget`'ı yükler. Böylece art arda seçimlerde yalnızca sürmekte olan istek ve en son hedef istenir.
-   - `pageSource.load(jumpTarget)` başarılı olup `epoch` hâlâ aynıysa: `loading = false`, `jumping = false`, `knownPageCount = count`, gelen entry'ler bu sayfa numarasıyla eklenir, index ilk oynatılabilir story olur, `ensureAhead()` ve `change`. Hedef sayfa boş sayfa sayacına dahil edilmez.
-   - Hata ve `epoch` aynıysa: `loading = false`, `errorKind` bugünkü gibi `fetch` ya da `structure`, `failedJump = page`, `change`.
-4. `retry()` bugünkü gibi yalnızca `errorKind === 'fetch'` iken çalışır. `failedJump` varsa `goToPage(failedJump)` yeniden çalışır; yoksa sonraki sayfayı yeniden dener. Başarılı bir atlama ya da yükleme `failedJump` değerini temizler.
+   - `epoch` bir artar; atlamadan önce başlamış arka plan yüklemesinin sonucu yok sayılır.
+   - `jumpTarget = page`, `loading = true`, `jumping = true`, `blocked = false`, `errorKind = null`, `emptyStreak = 0`, `failedJump = null`. Tampon (story'ler, görülen entry'ler) temizlenir ve `page` sayfasından başlar, index 0 olur. `change` yayılır.
+   - Başka bir atlama isteği sürüyorsa yeni istek başlatılmaz. Biten istek en son `jumpTarget` ile aynı sayfaysa sonucu kullanılır; değilse en son `jumpTarget` yüklenir. Böylece art arda seçimlerde yalnızca sürmekte olan istek ve en son hedef istenir.
+   - `pageSource.load(jumpTarget)` başarılı olursa: `loading = false`, `jumping = false`, `knownPageCount = count`, gelen entry'ler bu sayfa numarasıyla eklenir, index ilk oynatılabilir story olur, `ensureAhead()` ve `change`. Hedef sayfa boş sayfa sayacına dahil edilmez.
+   - Hata olursa: `loading = false`, `errorKind` bugünkü gibi `fetch` ya da `structure`, `failedJump = page`, `change`.
+4. `retry()` bugünkü gibi yalnızca `errorKind === 'fetch'` iken çalışır. `failedJump` varsa `goToPage(failedJump)` yeniden çalışır; yoksa sonraki sayfayı yeniden dener. Her yeni atlama `failedJump` değerini temizler.
 5. Arka plan sayfa yüklemesi (`fetchNextPage`) da başladığı andaki `epoch`'u saklar; sonuç geldiğinde `epoch` değişmişse sonucu yok sayar ve `loading` bayrağına dokunmaz.
 
 Yeni `state` alanları:
 
 | alan | değer |
 |---|---|
-| `page` | aktif story varsa onun `page` değeri; yoksa `jumping` iken `jumpTarget`; yoksa en son yüklenen sayfa (başlangıçta açılış sayfası) |
+| `page` | aktif story varsa onun `page` değeri; yoksa `jumping` iken `jumpTarget`; yoksa başarısız atlamanın sayfası (`failedJump`); yoksa en son yüklenen sayfa (başlangıçta açılış sayfası) |
 | `pagePosition` | §4; aktif story yoksa `null` |
 | `pageStoryCount` | §4; aktif story yoksa `null` |
 | `jumping` | sayfa atlaması sürüyorsa `true` |
@@ -201,9 +203,9 @@ Gizlilik formunda `açıklama: entry yazıları, yazar adları, tarihler ve gör
 
 - `test/helpers/eksi-html.js`: `entryHtml` yeni `avatar` parametresi alır (varsayılan `https://img.ekstat.com/profiles/deneme-1.jpg`) ve footer'a gerçek yapıyı ekler: `<div class="avatar-container"><a href="/biri/<nick>"><img class="avatar" src="<avatar>" data-default="//ekstat.com/img/default-profile-picture-dark.svg" alt="<yazar>" title="<yazar>"></a></div>`. `avatar: null` verilirse `avatar-container` eklenmez.
 - `test/entry-parser.test.js`: kişisel avatar mutlak adres olarak okunur; `//ekstat.com/img/default-profile-picture-dark.svg` → `https://ekstat.com/img/default-profile-picture-dark.svg`; `…-light.svg` → koyu sürüm; avatar yoksa `DEFAULT_AVATAR_URL`. Mevcut entry alanı testi `avatarUrl` alanını içerir.
-- `test/page-source.test.js`: `load(3)` doğru adresi ister ve sonrasında `next()` sayfa 4'ü ister; `load` ile `next` arasında 1500 ms aralık; eşzamanlı `load` ve `next` aynı anda tek istek; `load` 5xx'te bir kez tekrar dener; `load` sonrası `hasNext()` güncellenir.
-- `test/story-feed.test.js`: tampondaki sayfaya istek atmadan geçiş; tamponda olmayan sayfaya atlama (`state.page`, `jumping`, kart durumu, sonuçta ilk story); görselsiz hedef sayfadan sonra arama ve hedefin boş sayfa sayacına girmemesi; atlamadan önce başlayan arka plan yüklemesinin sonucunun yok sayılması; art arda üç atlamada yalnızca ilk ve son sayfanın istenmesi; atlama hatası ve `retry()` ile aynı sayfanın yeniden istenmesi; `pagePosition` ve `pageStoryCount` değerleri; sınır dışı sayfanın sıkıştırılması.
-- `test/main.smoke.test.js`: sayaç `1/1`; `.es-avatar` `src` fixture'daki avatar; tek sayfalı başlıkta `.es-pager` yok; iki sayfalı başlıkta gösterge var ve `»` tıklanınca `?p=2` istenir; ikinci sayfaya geçip Esc ile kapatınca `navigate` `…?focusto=<entry id>` ile çağrılır; açılış sayfasındaki entry'de kapatınca `navigate` çağrılmaz.
+- `test/page-source.test.js`: `load(3)` doğru adresi ister ve sonrasında `next()` sayfa 4'ü ister; `load` ile `next` arasında 1500 ms aralık; eşzamanlı `load` ve `next` aynı anda tek istek; `load` 5xx'te bir kez tekrar dener; `load` sonrası `hasNext()` güncellenir; sürmekte olan `next()` ile aynı sayfayı isteyen `load` ikinci istek atmaz.
+- `test/story-feed.test.js`: tampondaki sayfaya ve tampondaki görselsiz sayfaya istek atmadan geçiş; tamponda olmayan sayfaya atlama (`state.page`, `jumping`, kart durumu, sonuçta ilk story); görselsiz hedef sayfadan sonra arama ve hedefin boş sayfa sayacına girmemesi; atlamadan önce başlayan arka plan yüklemesinin sonucunun yok sayılması; art arda üç atlamada yalnızca ilk ve son sayfanın istenmesi; atlama hatası ve `retry()` ile aynı sayfanın yeniden istenmesi; `pagePosition` ve `pageStoryCount` değerleri; sınır dışı sayfanın sıkıştırılması.
+- `test/main.smoke.test.js`: sayaç `1/1`; `.es-avatar` `src` fixture'daki avatar; tek sayfalı başlıkta `.es-pager` gizli; çok sayfalı başlıkta gösterge görünür, açılışta sayfa istenmez ve `»` tıklanınca yalnızca `?p=2` istenir; ikinci sayfaya geçip Esc ile kapatınca `navigate` `…?focusto=<entry id>` ile çağrılır; açılış sayfasındaki entry'de kapatınca `navigate` çağrılmaz.
 
 ## 10. Playground ve Store görselleri
 
