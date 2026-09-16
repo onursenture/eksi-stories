@@ -1,9 +1,10 @@
-import { EKSI_ORIGIN } from './constants.js';
+import { DEFAULT_AVATAR_URL, EKSI_ORIGIN } from './constants.js';
 import { classifyImageLink, imageRefKey } from './image-links.js';
 
 const TEXT_NODE = 3;
 const ELEMENT_NODE = 1;
 const BBCODE_RESIDUE = /\[\/?(?:url|img)(?:=[^\]]*)?\]/gi;
+const LIGHT_DEFAULT_AVATAR = /default-profile-picture-light\.svg$/;
 
 export class PageStructureError extends Error {
   constructor(message = 'başlık sayfası yapısı bulunamadı') {
@@ -64,11 +65,22 @@ function parseEntry(li) {
     id,
     author,
     authorUrl: new URL(authorLink?.getAttribute('href') ?? `/biri/${author.replaceAll(' ', '-')}`, EKSI_ORIGIN).href,
+    avatarUrl: readAvatarUrl(li),
     date: li.querySelector('footer .entry-date')?.textContent.trim() ?? '',
     permalink: `${EKSI_ORIGIN}/entry/${id}`,
     text: content ? normalizeText(collectText(content, imageAnchors)) : '',
     images,
   };
+}
+
+function readAvatarUrl(li) {
+  const src = li.querySelector('footer .avatar-container img.avatar')?.getAttribute('src');
+  if (!src) return DEFAULT_AVATAR_URL;
+  try {
+    return new URL(src, EKSI_ORIGIN).href.replace(LIGHT_DEFAULT_AVATAR, 'default-profile-picture-dark.svg');
+  } catch {
+    return DEFAULT_AVATAR_URL;
+  }
 }
 
 function collectText(node, skip) {

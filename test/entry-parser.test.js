@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { isTopicPage, PageStructureError, parseTopicPage } from '../src/core/entry-parser.js';
+import { DEFAULT_AVATAR_URL } from '../src/core/constants.js';
 import { parseHtml } from './helpers/dom.js';
 import { link, topicPageHtml } from './helpers/eksi-html.js';
 
@@ -45,6 +46,7 @@ test('entry alanları ve görseli okunur', () => {
     id: '101',
     author: 'birinci yazar',
     authorUrl: 'https://eksisozluk.com/biri/birinci-yazar',
+    avatarUrl: 'https://img.ekstat.com/profiles/deneme-1.jpg',
     date: '30.06.2019 17:04',
     permalink: 'https://eksisozluk.com/entry/101',
     text: 'göcekten selamlar',
@@ -86,4 +88,21 @@ test('[url]/[img] kalıntıları metinden temizlenir', () => {
 
 test('yapı yoksa PageStructureError fırlatılır', () => {
   assert.throws(() => parseTopicPage(parseHtml('<html><body><form id="login"></form></body></html>')), PageStructureError);
+});
+
+test('avatar okunur, açık varsayılan koyuya çevrilir, yoksa varsayılan kullanılır', () => {
+  const doc = parseHtml(topicPageHtml({
+    entries: [
+      { id: '201', content: 'a', avatar: 'https://img.ekstat.com/profiles/ornek-123.jpg' },
+      { id: '202', content: 'b', avatar: '//ekstat.com/img/default-profile-picture-dark.svg' },
+      { id: '203', content: 'c', avatar: '//ekstat.com/img/default-profile-picture-light.svg' },
+      { id: '204', content: 'd', avatar: null },
+    ],
+  }));
+  assert.deepEqual(parseTopicPage(doc).entries.map((entry) => entry.avatarUrl), [
+    'https://img.ekstat.com/profiles/ornek-123.jpg',
+    'https://ekstat.com/img/default-profile-picture-dark.svg',
+    'https://ekstat.com/img/default-profile-picture-dark.svg',
+    DEFAULT_AVATAR_URL,
+  ]);
 });

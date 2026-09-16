@@ -6,8 +6,11 @@ export const link = (href, text = href) =>
   `<a rel="nofollow noopener" class="url" target="_blank" href="${escapeHtml(href)}">${escapeHtml(text)}</a>`;
 
 /** Gerçek <li> yapısı. `content` ham HTML'dir. */
-export function entryHtml({ id, author = 'deneme yazar', date = '01.01.2026 10:00', content = '' }) {
+export function entryHtml({ id, author = 'deneme yazar', date = '01.01.2026 10:00', content = '', avatar = 'https://img.ekstat.com/profiles/deneme-1.jpg' }) {
   const nick = author.replaceAll(' ', '-');
+  const avatarHtml = avatar === null
+    ? ''
+    : `<div class="avatar-container"><a href="/biri/${escapeHtml(nick)}"><img class="avatar" src="${escapeHtml(avatar)}" data-default="//ekstat.com/img/default-profile-picture-dark.svg" alt="${escapeHtml(author)}" title="${escapeHtml(author)}"></a></div>`;
   return `
 <li data-id="${id}" data-author="${escapeHtml(author)}" data-author-id="1" data-flags="share report vote" data-isfavorite="false" data-favorite-count="0" id="entry-item" data-show="true">
   <div class="content">
@@ -23,6 +26,7 @@ export function entryHtml({ id, author = 'deneme yazar', date = '01.01.2026 10:0
           </div>
           <div><a class="entry-date permalink" href="/entry/${id}">${escapeHtml(date)}</a></div>
         </div>
+        ${avatarHtml}
       </div>
     </div>
   </footer>

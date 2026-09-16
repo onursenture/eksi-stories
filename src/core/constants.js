@@ -11,3 +11,5 @@ export const RESOLVE_CONCURRENCY = 2;
 export const EMPTY_PAGE_LIMIT = 5;
 export const TOAST_MS = 1500;
 export const LEFT_TAP_RATIO = 0.3;
+
+export const DEFAULT_AVATAR_URL = 'https://ekstat.com/img/default-profile-picture-dark.svg';
