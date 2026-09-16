@@ -4,6 +4,7 @@ import { PageStructureError } from '../src/core/entry-parser.js';
 import { buildPageUrl, createPageSource, PageFetchError } from '../src/core/page-source.js';
 import { parseHtml } from './helpers/dom.js';
 import { link, topicPageHtml } from './helpers/eksi-html.js';
+import { deferred, flush } from './helpers/async.js';
 
 const TOPIC_URL = 'https://eksisozluk.com/deneme--1000001';
 const ok = (body) => ({ ok: true, status: 200, text: async () => body });
@@ -140,4 +141,64 @@ test('başlık büyüdükçe sayfa sayısı güncellenir', async () => {
   const result = await source.next();
   assert.equal(result.count, 4);
   assert.equal(source.hasNext(), true);
+});
+
+test('load istenen sayfayı çeker, next ondan sonraki sayfadan devam eder', async () => {
+  const requests = [];
+  const { source } = makeSource(async (url) => {
+    requests.push(url);
+    const page = Number(new URL(url).searchParams.get('p'));
+    return ok(pageBody(page, 6));
+  }, { count: 6 });
+  const loaded = await source.load(3);
+  assert.equal(loaded.page, 3);
+  assert.equal(loaded.count, 6);
+  assert.deepEqual(loaded.entries.map((entry) => entry.id), ['301']);
+  assert.equal(source.hasNext(), true);
+  assert.equal((await source.next()).page, 4);
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=3`, `${TOPIC_URL}?p=4`]);
+});
+
+test('load son sayfayı yüklerse hasNext false olur', async () => {
+  const { source } = makeSource(async () => ok(pageBody(5, 5)));
+  await source.load(5);
+  assert.equal(source.hasNext(), false);
+});
+
+test('load ve next aynı anda tek istek atar, aralarında 1500 ms beklenir', async () => {
+  const requests = [];
+  const firstResponse = deferred();
+  const { source, clock } = makeSource(async (url) => {
+    requests.push(url);
+    const page = Number(new URL(url).searchParams.get('p'));
+    if (page === 2) await firstResponse.promise;
+    return ok(pageBody(page, 9));
+  }, { count: 9 });
+  const both = Promise.all([source.next(), source.load(7)]);
+  await flush();
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=2`], 'ilk yanıt gelmeden ikinci istek başlamaz');
+  firstResponse.resolve();
+  await both;
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=2`, `${TOPIC_URL}?p=7`]);
+  assert.deepEqual(clock.sleeps, [1500]);
+});
+
+test('load sürmekte olan next ile aynı sayfayı isterse ikinci istek atılmaz', async () => {
+  const requests = [];
+  const { source } = makeSource(async (url) => {
+    requests.push(url);
+    return ok(pageBody(2, 5));
+  });
+  const fromNext = source.next();
+  const fromLoad = source.load(2);
+  assert.equal(fromLoad, fromNext);
+  await fromLoad;
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=2`]);
+});
+
+test('load 5xx hatasında 5 sn sonra bir kez tekrar dener', async () => {
+  const responses = [failWith(502), ok(pageBody(4, 5))];
+  const { source, clock } = makeSource(async () => responses.shift());
+  assert.equal((await source.load(4)).page, 4);
+  assert.deepEqual(clock.sleeps, [5000]);
 });

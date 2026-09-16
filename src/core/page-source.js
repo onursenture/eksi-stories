@@ -21,8 +21,8 @@ export function buildPageUrl(baseUrl, page) {
 const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Başlığın sonraki sayfalarını siteye yük bindirmeden, sırayla çeker.
- * @returns {{ hasNext: () => boolean, next: () => Promise<{ page: number, count: number, entries: object[] }> }}
+ * Başlığın sayfalarını siteye yük bindirmeden, sırayla çeker.
+ * @returns {{ hasNext: () => boolean, next: () => Promise<{ page: number, count: number, entries: object[] }>, load: (page: number) => Promise<{ page: number, count: number, entries: object[] }> }}
  */
 export function createPageSource({
   fetch,
@@ -38,7 +38,9 @@ export function createPageSource({
   let lastPage = current;
   let pageCount = count;
   let lastRequestAt = Number.NEGATIVE_INFINITY;
-  let inFlight = null;
+  let queue = Promise.resolve();
+  let nextInFlight = null;
+  let nextInFlightPage = 0;
 
   async function request(url) {
     const wait = lastRequestAt + minGapMs - now();
@@ -58,7 +60,7 @@ export function createPageSource({
     }
   }
 
-  async function load(page) {
+  async function fetchPage(page) {
     const url = buildPageUrl(baseUrl, page);
     let result = await request(url);
     if (result.error && result.retryable) {
@@ -69,27 +71,39 @@ export function createPageSource({
     return parseTopicPage(parseHtml(result.html));
   }
 
+  /** Sayfa isteklerini sıraya sokar: biri bitmeden sonraki başlamaz. */
+  function enqueue(page) {
+    const result = queue.then(async () => {
+      const parsed = await fetchPage(page);
+      lastPage = page;
+      if (parsed.page.current !== page) {
+        pageCount = page;
+        return { page, count: pageCount, entries: [] };
+      }
+      pageCount = Math.max(parsed.page.count, page);
+      return { page, count: pageCount, entries: parsed.entries };
+    });
+    queue = result.catch(() => {});
+    return result;
+  }
+
   const hasNext = () => lastPage < pageCount;
 
   function next() {
-    if (inFlight) return inFlight;
+    if (nextInFlight) return nextInFlight;
     if (!hasNext()) return Promise.reject(new Error('sonraki sayfa yok'));
-    const page = lastPage + 1;
-    inFlight = load(page)
-      .then((parsed) => {
-        lastPage = page;
-        if (parsed.page.current !== page) {
-          pageCount = page;
-          return { page, count: pageCount, entries: [] };
-        }
-        pageCount = Math.max(parsed.page.count, page);
-        return { page, count: pageCount, entries: parsed.entries };
-      })
-      .finally(() => {
-        inFlight = null;
-      });
-    return inFlight;
+    nextInFlightPage = lastPage + 1;
+    nextInFlight = enqueue(nextInFlightPage).finally(() => {
+      nextInFlight = null;
+    });
+    return nextInFlight;
   }
 
-  return { hasNext, next };
+  /** İstenen sayfayı yükler; aynı sayfa zaten `next()` ile isteniyorsa o sözü döndürür. */
+  function load(page) {
+    if (nextInFlight && nextInFlightPage === page) return nextInFlight;
+    return enqueue(page);
+  }
+
+  return { hasNext, next, load };
 }
