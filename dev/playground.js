@@ -1,16 +1,16 @@
 import { createStoryFeed } from '../src/core/story-feed.js';
 import { openViewer } from '../src/viewer/viewer.js';
 
+const LONG_TEXT = 'sabah vapurundan. martılar simit peşinde, deniz dümdüz, karşı yaka sisin arkasında kaybolmuş. kimse telefonuna bakmıyor, herkes aynı yere bakıyor. iskeleye yanaşana kadar kimse yerinden kalkmadı, ben de kalkmadım. fotoğraf biraz eğri çıktı, olsun.';
 const SHAPES = [
-  { label: 'dikey 9:16', w: 1080, h: 1920 },
-  { label: 'yatay 16:9', w: 1920, h: 1080 },
-  { label: 'kare', w: 1200, h: 1200 },
-  { label: 'panorama 4:1', w: 3200, h: 800 },
-  { label: 'uzun ekran görüntüsü 1:4', w: 800, h: 3200 },
-  { label: 'küçük 320×240', w: 320, h: 240 },
+  { label: 'dikey 9:16', w: 1080, h: 1920, caption: LONG_TEXT },
+  { label: 'yatay 16:9', w: 1920, h: 1080, caption: 'işten çıkınca iskele.' },
+  { label: 'kare', w: 1200, h: 1200, caption: 'balkondaki sardunyalar.' },
+  { label: 'panorama 4:1', w: 3200, h: 800, caption: 'tepeden bütün şehir, sis daha kalkmamış.' },
+  { label: 'uzun ekran görüntüsü 1:4', w: 800, h: 3200, caption: 'uzun bir ekran görüntüsü.' },
+  { label: 'küçük 320×240', w: 320, h: 240, caption: 'eski telefondan kalma bir fotoğraf.' },
 ];
 const BROKEN_IMAGE = 'data:image/png;base64,AAAA';
-const LONG_TEXT = 'bu uzun bir entry metnidir, caption üç satırda kırpılmalı ve tıklayınca açılmalıdır. '.repeat(12);
 
 function svgImage({ label, w, h }, hue) {
   const fontSize = Math.round(Math.min(w, h) / 10);
@@ -60,13 +60,13 @@ const resolver = { resolve: (ref) => Promise.resolve(ref.url) };
 
 const SCENARIOS = [
   ['en-boy oranları', () => ({
-    entries: SHAPES.map((shape, i) => makeEntry([svgImage(shape, i * 55)], i === 0 ? LONG_TEXT : shape.label)),
+    entries: SHAPES.map((shape, i) => makeEntry([svgImage(shape, i * 55)], shape.caption)),
     pages: [],
   })],
   ['çoklu görsel + bozuk görsel', () => ({
     entries: [
-      makeEntry([svgImage(SHAPES[0], 10), BROKEN_IMAGE, svgImage(SHAPES[2], 200)], 'üç görselli entry, ortadaki bozuk'),
-      makeEntry([svgImage(SHAPES[1], 120)], 'tek görselli entry'),
+      makeEntry([svgImage(SHAPES[0], 10), BROKEN_IMAGE, svgImage(SHAPES[2], 200)], 'bayram sabahından üç kare.'),
+      makeEntry([svgImage(SHAPES[1], 120)], 'tek kare.'),
     ],
     pages: [],
   })],
@@ -75,9 +75,9 @@ const SCENARIOS = [
     pages: [[makeEntry([svgImage(SHAPES[1], 90)], 'sayfa 2')], [makeEntry([svgImage(SHAPES[2], 180)], 'sayfa 3')]],
     delayMs: 1500,
   })],
-  ['boş sayfalar → devam ara', () => ({
+  ['boş sayfalar → aramaya devam', () => ({
     entries: [makeEntry([svgImage(SHAPES[2], 30)], 'sonrasında 5 görselsiz sayfa var')],
-    pages: [...Array.from({ length: 5 }, () => [makeEntry([])]), [makeEntry([svgImage(SHAPES[0], 300)], 'devam aradıktan sonra bulundu')]],
+    pages: [...Array.from({ length: 5 }, () => [makeEntry([])]), [makeEntry([svgImage(SHAPES[0], 300)], 'aramaya devam edince bulundu')]],
   })],
   ['sayfa hatası → tekrar dene', () => ({
     entries: [makeEntry([svgImage(SHAPES[1], 60)], 'sonraki sayfa bir kez hata verecek')],
