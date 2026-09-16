@@ -552,10 +552,10 @@ async () => {
   const root = document.querySelector('eksi-stories-viewer').shadowRoot;
   root.querySelector('.es-root').style.setProperty('--es-duration', '600000ms');
   const caption = () => root.querySelector('.es-caption').textContent;
-  for (let t = 0; t < 40 && !caption().startsWith(TARGET); t += 1) {
-    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight' }));
-    await sleep(80);
-  }
+  const key = (name) => window.dispatchEvent(new KeyboardEvent('keydown', { key: name }));
+  // Araç turu 5 saniyeyi aşarsa hikâye hedefi geçmiş olabilir: önce başa sar, sonra ileri git.
+  for (let t = 0; t < 20; t += 1) { key('ArrowLeft'); await sleep(40); }
+  for (let t = 0; t < 40 && !caption().startsWith(TARGET); t += 1) { key('ArrowRight'); await sleep(80); }
   for (let t = 0; t < 80 && root.querySelector('.es-frame').classList.contains('is-loading'); t += 1) await sleep(25);
   return { caption: caption().slice(0, 40), paused: root.querySelector('.es-root').classList.contains('is-paused') };
 }
