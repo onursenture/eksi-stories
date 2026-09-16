@@ -31,7 +31,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
   const date = el('span', { class: 'es-date' });
   const permalink = el('a', { class: 'es-permalink', target: '_blank', rel: 'noopener', text: "entry'ye git" });
   const pageInfo = el('span', { class: 'es-page' });
-  const pausedBadge = el('span', { class: 'es-paused', title: 'duraklatıldı', text: '❚❚' });
+  const pausedBadge = el('span', { class: 'es-paused', title: 'durdu', text: '❚❚' });
   const closeButton = el('button', { class: 'es-close', type: 'button', 'aria-label': 'kapat', text: '✕' });
   const top = el('div', { class: 'es-top' }, [
     progress,
@@ -55,7 +55,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     class: 'es-root',
     role: 'dialog',
     'aria-modal': 'true',
-    'aria-label': `story görüntüleyici: ${topic.title}`,
+    'aria-label': `story: ${topic.title}`,
     tabindex: '-1',
   }, [backdrop, stage, toast]);
   root.style.setProperty('--es-duration', `${STORY_DURATION_MS}ms`);
@@ -170,19 +170,19 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     let text;
     const actions = [];
     if (state.loading) {
-      text = 'sonraki sayfa aranıyor…';
+      text = 'sonraki sayfa yükleniyor…';
     } else if (state.blocked) {
-      text = `sonraki ${EMPTY_PAGE_LIMIT} sayfada görsel yok`;
-      actions.push(actionButton('devam ara', () => feed.continueSearching()));
+      text = `${EMPTY_PAGE_LIMIT} sayfadır görsel yok`;
+      actions.push(actionButton('aramaya devam', () => feed.continueSearching()));
     } else if (state.errorKind === 'fetch') {
-      text = 'sonraki sayfa alınamadı';
+      text = 'sayfa gelmedi';
       actions.push(actionButton('tekrar dene', () => feed.retry()));
     } else if (state.errorKind === 'structure') {
-      text = 'devam edilemedi';
+      text = 'sayfa okunamadı';
     } else if (state.length === 0) {
-      text = 'görsel bulunamadı';
+      text = 'görsel yok';
     } else {
-      text = 'başlığın sonuna geldin';
+      text = 'başlıkta başka görsel yok';
       actions.push(actionButton('başa dön', () => feed.goTo(0)));
     }
     if (cardKey === text) return;
@@ -296,7 +296,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
   win.addEventListener('keydown', onKeyDown, true);
   doc.addEventListener('visibilitychange', onVisibilityChange);
   const offChange = feed.on('change', render);
-  const offSkipped = feed.on('skipped', () => showToast('görsel yüklenemedi, atlandı'));
+  const offSkipped = feed.on('skipped', () => showToast('görsel açılmadı, geçildi'));
 
   const previousOverflow = doc.documentElement.style.overflow;
   doc.documentElement.style.overflow = 'hidden';

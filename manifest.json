@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Stories for Ekşi Sözlük",
+  "name": "stories for ekşi sözlük",
   "version": "0.1.0",
-  "description": "Ekşi Sözlük başlıklarındaki görselleri story olarak izleyin. Resmi değildir; Ekşi Teknoloji ile bağı yoktur.",
+  "description": "ekşi sözlük başlıklarındaki görselleri story gibi izle.",
   "minimum_chrome_version": "111",
   "icons": {
     "16": "src/icons/icon-16.png",

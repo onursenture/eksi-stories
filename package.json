@@ -1,7 +1,7 @@
 {
   "name": "eksi-stories",
   "version": "0.1.0",
-  "description": "Stories for Ekşi Sözlük: Chrome eklentisi (resmi değildir)",
+  "description": "ekşi sözlük başlıklarındaki görselleri story gibi izle.",
   "private": true,
   "type": "module",
   "license": "MIT",

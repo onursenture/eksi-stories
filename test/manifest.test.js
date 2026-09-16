@@ -20,10 +20,10 @@ function globToRegExp(glob) {
 
 test('manifest v3, ad ve açıklama kuralları', () => {
   assert.equal(manifest.manifest_version, 3);
-  assert.equal(manifest.name, 'Stories for Ekşi Sözlük');
+  assert.equal(manifest.name, 'stories for ekşi sözlük');
   assert.match(manifest.version, /^\d+\.\d+\.\d+$/);
   assert.ok([...manifest.description].length <= 132, 'açıklama en fazla 132 karakter olmalı');
-  assert.match(manifest.description, /resmi değildir/i);
+  assert.equal(manifest.description, 'ekşi sözlük başlıklarındaki görselleri story gibi izle.');
 });
 
 test('ek izin istenmez; yalnızca eksisozluk.com content script', () => {

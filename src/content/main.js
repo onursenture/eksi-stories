@@ -15,7 +15,7 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 export async function main({ cssUrl, doc = document, fetchImpl = (url, init) => globalThis.fetch(url, init) }) {
   if (!isTopicPage(doc)) {
     if (TOPIC_PATH.test(doc.location.pathname)) {
-      console.warn('[eksi-stories] başlık sayfası yapısı tanınmadı; buton eklenmedi.');
+      console.warn('[eksi-stories] başlık sayfası tanınmadı, buton eklenmedi.');
     }
     return;
   }
@@ -52,7 +52,7 @@ export async function main({ cssUrl, doc = document, fetchImpl = (url, init) => 
       });
     } catch (error) {
       open = false;
-      console.warn('[eksi-stories] görüntüleyici açılamadı:', error);
+      console.warn('[eksi-stories] story açılmadı:', error);
     }
   });
 }
@@ -85,8 +85,8 @@ function createButton(doc, count) {
   const button = doc.createElement('button');
   button.type = 'button';
   button.className = BUTTON_CLASS;
-  button.title = 'bu sayfadan itibaren görselleri story olarak izle';
-  button.setAttribute('aria-label', `story olarak izle, bu sayfada ${count} görsel`);
+  button.title = 'görselleri story gibi izle';
+  button.setAttribute('aria-label', `story gibi izle, bu sayfada ${count} görsel`);
 
   const svg = doc.createElementNS(SVG_NS, 'svg');
   svg.setAttribute('viewBox', '0 0 16 16');
