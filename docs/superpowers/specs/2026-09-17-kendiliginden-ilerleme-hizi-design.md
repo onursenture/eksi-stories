@@ -1,7 +1,7 @@
 # kendiliğinden ilerleme hızı: tasarım
 
 Tarih: 2026-09-17
-Durum: Onaylandı (brainstorming sonucu).
+Durum: Onaylandı (brainstorming sonucu). Plan yazılırken, temiz kopyada denenen koda göre §5, §6 ve §10 netleştirildi: `görsel açılmadı` yazısı kutunun içinde duruyor; `walk` ile değişen sınır testleri dört; hak testi tavanı da sabitliyor; iki smoke testinin akışı kesinleşti; kapatma tablosu için eski spec'e yalnızca not düşülüyor.
 
 ## 1. Sorun
 
@@ -166,7 +166,7 @@ Hepsi §2.1'deki gibi, scratchpad'deki prototiplerle ölçüldü. Sayılar sayfa
 ## 5. Görüntüleyici (`src/viewer/viewer.js`, `src/viewer/viewer.css`)
 
 - **Yeni öğe: `görsel açılmadı` yazısı (`.es-failed`).**
-  - `stage` içinde, dönen simgeyle aynı yerde, ortada durur. `role="status"` taşır, başta gizlidir.
+  - Kutunun (`.es-frame`) içinde, görselden sonra, üst bar ve alttaki yazıdan önce durur; kutunun ortasına yerleşir. Böylece açılan uzun yazı onu örter, kart gösterilince kutuyla birlikte gizlenir. `role="status"` taşır, başta gizlidir.
   - Gösterilirken metni yazılır, gizlenirken boşaltılır. Böylece ekran okuyucu her açılmayan story'de duyurur, kalkan bildirimin yaptığı gibi.
 - **`render()`'da aktif story `failed` ise:**
   - story değiştiyse `showStory` bugünkü gibi yazar, tarih, yazı, avatar ve 9:16 kutuyu (`is-loading`) kurar;
@@ -181,7 +181,7 @@ Hepsi §2.1'deki gibi, scratchpad'deki prototiplerle ölçüldü. Sayılar sayfa
   - `showToast`, `toastTimer`, `feed.on('skipped', ...)`, `TOAST_MS` içe aktarımı;
   - `close()` içindeki bildirim zamanlayıcısı temizliği.
 - **CSS:**
-  - `.es-failed`: kart yazısıyla aynı boyut (16 px), `margin: 0`, `pointer-events: none`.
+  - `.es-failed`: kutunun ortasında (`position: absolute`, `top: 50%`, `left: 0`, `right: 0`, `transform: translateY(-50%)`, `text-align: center`); kart yazısıyla aynı boyut (16 px), `margin: 0`, `pointer-events: none`.
   - Kutu `.es-frame.is-loading` kuralını kullanır, yeni boyut kuralı yok.
 
 ## 6. Sayfa sırası (`src/core/page-source.js`)
@@ -216,7 +216,7 @@ export function createPageQueue({
   - `enqueue(pickPageFn, options)`: `next()` `{ fetchAhead: true }` verir, `load(page)` seçenek vermez;
   - art arda aynı sayfa istenip son sonuç dönerse istek atılmaz ve hak harcanmaz.
 - **JSDoc** (`createPageQueue`), eklenecek cümle: "Önden okuma istekleri (`fetchAhead`) ayrıca hak harcar: `fetchAheadBurst` hak vardır, her `fetchAheadRefillMs`'de bir hak dolar, hak yoksa dolana kadar beklenir. Varsayılanlar sayfa sınırı ve story süresidir: tek bir görselsiz bölüm hızlı taranır, uzun zincir story süresinden hızlı sayfa istemez."
-- **Kapatma davranışına** (`2026-09-17-ortak-istek-sirasi-design.md` §5) bir satır eklenir:
+- **Kapatma davranışı** (`2026-09-17-ortak-istek-sirasi-design.md` §5) şu satırla genişler. O spec'in gövdesi değişmez; başına not düşülür (§8):
 
   | kapatıldığı an iş nerede | ne olur |
   |---|---|
@@ -309,7 +309,7 @@ Yerlerine iki test gelir. İkisi de bugünkü kodda başarısız olur.
    - `markFailed` yeniden çağrılınca hiçbir şey değişmez.
    - `next()` ile `b`'ye geçilir.
 
-Açılmayan görsel sınırı testleri (`görselleri açılmayan sayfalar da 5 sayfa sınırına sayılır`, `görsel açılınca sayım o görselin sayfasından yeniden başlar`, `aktif olmayan story için markOpened yok sayılır`, `atlamada açılan görselin sayfası sıfırlanır`, `tampondaki sayfaya geçiş sayfa sınırını sıfırlamaz`) aynı sonuçları sabitlemeye devam eder. Açılmayan story'lerin üzerinden artık `next()` ile geçilir.
+Görseli açılmayan sayfalarla kurulan dört sınır testi aynı sonuçları sabitlemeye devam eder: `görselleri açılmayan sayfalar da 5 sayfa sınırına sayılır`, `görsel açılınca sayım o görselin sayfasından yeniden başlar`, `aktif olmayan story için markOpened yok sayılır`, `tampondaki sayfaya geçiş sayfa sınırını sıfırlamaz`. Açılmayan story'ler artık atlanmadığı için bu testler, bekleyen işleri bitirip `next()` ile ilerleyen küçük bir `walk` yardımcısıyla üzerlerinden geçer. `atlamada açılan görselin sayfası sıfırlanır` testinde açılmayan görsel yok; değişmez.
 
 ### `test/page-source.test.js`
 
@@ -319,7 +319,8 @@ Açılmayan görsel sınırı testleri (`görselleri açılmayan sayfalar da 5 s
    - Art arda 8 kez `next()` çağrılır.
    - Beklemeler: `[1500, 1500, 1500, 1500, 1500, 1500, 1000, 1500, 3500]`.
    - İstek başlangıçları: 0, 1500, 3000, 4500, 6000, 7500, 10000 ve 15000 ms.
-   - Bugünkü kodda beklemeler yedi kez 1500 olduğu için test başarısız olur.
+   - Saat bir dakika ilerletilip 8 `next()` daha çağrılınca aynı desen tekrar eder (75000 … 90000 ms): haklar en fazla 5'e dolar.
+   - Bugünkü kodda 7. ve 8. istekler 9000 ve 10500 ms'de başladığı için test başarısız olur.
 4. `sayfa atlama hak harcamaz`
    - 6 `next()` sonrası `load(9)` yalnızca 1500 ms bekler, ardından gelen `next()` de yalnızca 1500 ms bekler.
    - `load` hak harcasaydı son beklemeler `1500, 1000, 1500, 3500` olurdu.
@@ -335,16 +336,19 @@ Mevcut `istekler arasında en az 1500 ms beklenir` testi üç istek attığı i�
 ### `test/main.smoke.test.js`
 
 6. `görselleri açılmayan başlıkta gizli sekme 5 sayfadan sonra durur` testinin yerine `açılmayan görsel ekranda kalır, süresi dolunca sonraki story gelir` gelir.
-   - Kurulum: `brokenImagesSetup()`, bütün `/img/` istekleri 404.
-   - Açılıştan ve `/img/` yanıtlarından sonra:
-     - yazar hâlâ `sayfa 1 yazarı`, sayaç `1/4`;
-     - `.es-failed` görünür ve metni `görsel açılmadı`, dönen simge gizli, `.es-toast` yok;
-     - 3 `/img/` isteği gitmiş, sayfa isteği yok.
-   - Aktif çizgide `animationend` (`es-fill`) tetiklenince sayaç `2/4` olur, 4. `/img/` isteği gider ve tamponda 3'ten az story kaldığı için `?p=2` istenir. jsdom animasyon çalıştırmadığı için olay elle tetiklenir.
-   - Bugünkü kodda story atlandığı için test başarısız olur.
+   - Kurulum: 1. sayfanın ilk görseli açılır (`acilan101`), diğer bütün `/img/` istekleri 404. `brokenImagesSetup` 1. sayfayı da değiştirebilir hale gelir.
+   - İlk görselin `load` olayı tetiklenir: bulanık arka plan dolar, 3 `/img/` isteği gitmiştir.
+   - Aktif çizgide `animationend` (`es-fill`) tetiklenir. jsdom görsel yüklemediği ve animasyon çalıştırmadığı için iki olay da elle tetiklenir. Sonra:
+     - sayaç `2/4`, yani açılmayan story atlanmamıştır;
+     - `.es-failed` görünür ve metni `görsel açılmadı`; dönen simge gizli, bulanık arka plan boş, `.es-toast` yok;
+     - bu arada gelen yanıtlar çizgiyi baştan başlatmamıştır (aktif çizgi aynı öğe);
+     - 4 `/img/` isteği gitmiştir; tamponda 3'ten az story kaldığı için `?p=2` istenmiştir.
+   - Çizgi bir kez daha bitince sayaç `3/4` olur, yazı görünür kalır.
+   - İki kez ← basılınca sayaç `1/4` olur ve yazı gizlenir.
+   - Bugünkü kodda story atlandığı için test başarısız olur (sayaç `4/4`).
 7. `görsel açılınca önden okuma o görselin sayfasından sürer`
-   - Açılmayan görsellerin yerine 1–5. sayfalar görselsiz olur; 6. sayfada açılan tek bir görsel vardır.
-   - Beklentiler aynı: `load` tetiklenmeden `?p=2` … `?p=6` istenir, tetiklenince `?p=7`.
+   - Açılmayan görsellerin yerine 1–5. sayfalar ve 7. sayfadan sonrası görselsiz olur; 6. sayfada açılan tek bir görsel vardır.
+   - `load` tetiklenmeden `?p=2` … `?p=6` istenir. Tetiklenince sayım 6. sayfadan yeniden başlar ve `?p=7` … `?p=11` istenir.
    - Görüntüleyicideki `markOpened` çağrısını açılmayan görsellere dayanmadan sabitler. Bugünkü kodda da geçer.
 
 Test sayısı 96'dan 97'ye çıkar.
