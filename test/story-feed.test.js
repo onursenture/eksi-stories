@@ -20,6 +20,15 @@ const brokenPages = (from, to) => Array.from({ length: to - from + 1 }, (_, i) =
 /** `fakeResolver`'da açılmayacak `x1`–`x<to>` kimlikleri. */
 const brokenIds = (to) => Array.from({ length: to }, (_, i) => `x${i + 1}`);
 
+/** Açılmayan story'ler atlanmadığı için `next()` ile yürür: her adımdan önce bekleyen işler biter; `until` doğru olunca ya da sonun ötesinde durur. */
+async function walk(feed, until = () => false) {
+  for (let step = 0; step < 50; step += 1) {
+    for (let i = 0; i < 8; i += 1) await flush();
+    if (!feed.current() || until(feed.current())) return;
+    feed.next();
+  }
+}
+
 function fakeResolver(fail = []) {
   const calls = [];
   return {
@@ -209,54 +218,39 @@ test('yapı hatasında errorKind structure olur ve retry etkisizdir', async () =
   assert.equal(pageSource.calls.length, 1);
 });
 
-test('başarısız olduğu bilinen story gezinmede atlanır', async () => {
+test('açılmayan story gezinmede atlanmaz', async () => {
   const { feed } = makeFeed({ entries: [entry('1', ['a', 'bad', 'c'])], fail: ['bad'] });
-  const skipped = [];
-  feed.on('skipped', (story) => skipped.push(story.ref.id));
   feed.start();
   await flush();
-  assert.deepEqual(skipped, []);
   feed.next();
-  assert.equal(feed.current().ref.id, 'c');
-  assert.deepEqual(skipped, ['bad']);
-});
-
-test('aktif story başarısız olunca atlanır ve skipped yayılır', async () => {
-  const { feed } = makeFeed({ entries: [entry('1', ['bad', 'b'])], fail: ['bad'] });
-  const skipped = [];
-  feed.on('skipped', (story) => skipped.push(story.ref.id));
-  feed.start();
   assert.equal(feed.current().ref.id, 'bad');
+  assert.equal(feed.current().status, 'failed');
+  feed.next();
+  assert.equal(feed.current().ref.id, 'c');
+  feed.prev();
+  assert.equal(feed.current().ref.id, 'bad');
+});
+
+test('aktif story açılmayınca yerinde kalır', async () => {
+  const { feed } = makeFeed({ entries: [entry('1', ['bad', 'b'])], fail: ['bad'] });
+  let changes = 0;
+  feed.on('change', () => {
+    changes += 1;
+  });
+  feed.start();
+  const afterStart = changes;
   await flush();
-  assert.deepEqual(skipped, ['bad']);
+  assert.equal(feed.current().ref.id, 'bad');
+  assert.equal(feed.current().status, 'failed');
+  assert.ok(changes > afterStart, 'change yayılır');
+
+  const beforeRepeat = changes;
+  feed.markFailed(feed.current());
+  assert.equal(changes, beforeRepeat, 'ikinci markFailed etkisiz');
+  assert.equal(feed.current().ref.id, 'bad');
+
+  feed.next();
   assert.equal(feed.current().ref.id, 'b');
-});
-
-test('tamamen başarısız grup tek bildirim verir, geri dönünce tekrar bildirilmez', async () => {
-  const { feed } = makeFeed({ entries: [entry('1', ['a']), entry('2', ['bad1', 'bad2']), entry('3', ['c'])], fail: ['bad1', 'bad2'] });
-  const skipped = [];
-  feed.on('skipped', (story) => skipped.push(story.ref.id));
-  feed.start();
-  await flush();
-  assert.deepEqual(skipped, []);
-  feed.next();
-  assert.equal(feed.current().ref.id, 'c');
-  assert.deepEqual(skipped, ['bad1']);
-  feed.prev();
-  assert.equal(feed.current().ref.id, 'a');
-  assert.deepEqual(skipped, ['bad1']);
-});
-
-test('geri giderken başarısız story geriye atlanır; geride yoksa ileri gidilir', () => {
-  const { feed } = makeFeed({ entries: [entry('1', ['a', 'b', 'c'])] });
-  feed.start();
-  feed.next();
-  feed.next();
-  feed.prev();
-  feed.markFailed(feed.current());
-  assert.equal(feed.current().ref.id, 'a');
-  feed.markFailed(feed.current());
-  assert.equal(feed.current().ref.id, 'c');
 });
 
 test("prev ilk story'de kalır, goTo(0) başa döner", () => {
@@ -499,14 +493,14 @@ test('görselleri açılmayan sayfalar da 5 sayfa sınırına sayılır', async 
     fail: brokenIds(11),
   });
   feed.start();
-  for (let i = 0; i < 8; i += 1) await flush();
+  await walk(feed);
   assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6]);
   assert.equal(feed.current(), null);
   assert.equal(feed.state.blocked, true);
   assert.equal(feed.state.ended, false);
 
   feed.continueSearching();
-  for (let i = 0; i < 8; i += 1) await flush();
+  await walk(feed);
   assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
   assert.equal(feed.state.blocked, true);
 });
@@ -521,7 +515,7 @@ test('görsel açılınca sayım o görselin sayfasından yeniden başlar', asyn
     fail: brokenIds(12),
   });
   feed.start();
-  for (let i = 0; i < 8; i += 1) await flush();
+  await walk(feed, (story) => story.ref.id === 'ok4');
   assert.equal(feed.current().ref.id, 'ok4');
   assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6]);
   assert.equal(feed.state.blocked, true, 'sınır dolu, 4. sayfanın görseli henüz açılmadı');
@@ -531,8 +525,7 @@ test('görsel açılınca sayım o görselin sayfasından yeniden başlar', asyn
   assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6, 7]);
   assert.equal(feed.state.blocked, false);
 
-  feed.next();
-  for (let i = 0; i < 8; i += 1) await flush();
+  await walk(feed);
   assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6, 7, 8, 9]);
   assert.equal(feed.current(), null);
   assert.equal(feed.state.blocked, true);
@@ -546,7 +539,7 @@ test('aktif olmayan story için markOpened yok sayılır', async () => {
     fail: brokenIds(11),
   });
   feed.start();
-  for (let i = 0; i < 8; i += 1) await flush();
+  await walk(feed);
   assert.equal(feed.state.blocked, true);
 
   feed.markOpened(feed.peek(-1));
@@ -596,11 +589,11 @@ test('tampondaki sayfaya geçiş sayfa sınırını sıfırlamaz', async () => {
     fail: brokenIds(11),
   });
   feed.start();
-  for (let i = 0; i < 8; i += 1) await flush();
+  await walk(feed);
   assert.equal(feed.state.blocked, true);
 
   feed.goToPage(3);
-  for (let i = 0; i < 8; i += 1) await flush();
+  await walk(feed);
   assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6]);
   assert.equal(feed.state.blocked, true);
 });

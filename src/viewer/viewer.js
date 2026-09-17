@@ -4,7 +4,6 @@ import {
   HOLD_THRESHOLD_MS,
   LEFT_TAP_RATIO,
   STORY_DURATION_MS,
-  TOAST_MS,
 } from '../core/constants.js';
 
 const INTERACTIVE_SELECTOR = 'a, button, .es-caption, .es-card';
@@ -44,8 +43,9 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     ]),
   ]);
   const image = el('img', { class: 'es-image', alt: '', draggable: 'false' });
+  const failedText = el('p', { class: 'es-failed', role: 'status' });
   const caption = el('div', { class: 'es-caption' });
-  const frame = el('div', { class: 'es-frame' }, [image, top, caption]);
+  const frame = el('div', { class: 'es-frame' }, [image, failedText, top, caption]);
   const spinner = el('div', { class: 'es-spinner', role: 'progressbar', 'aria-label': 'yükleniyor' });
   const cardSpinner = el('div', { class: 'es-spinner', 'aria-hidden': 'true' });
   const cardText = el('p', { class: 'es-card-text' });
@@ -64,16 +64,15 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     pagerLast,
     pagerNext,
   ]);
-  const toast = el('div', { class: 'es-toast', role: 'status' });
   const root = el('div', {
     class: 'es-root',
     role: 'dialog',
     'aria-modal': 'true',
     'aria-label': `story: ${topic.title}`,
     tabindex: '-1',
-  }, [backdrop, stage, pager, toast]);
+  }, [backdrop, stage, pager]);
   root.style.setProperty('--es-duration', `${STORY_DURATION_MS}ms`);
-  for (const node of [pausedBadge, spinner, card, pager, toast]) node.hidden = true;
+  for (const node of [pausedBadge, spinner, failedText, card, pager]) node.hidden = true;
 
   const host = doc.createElement('eksi-stories-viewer');
   host.attachShadow({ mode: 'open' }).append(el('style', { text: cssText }), root);
@@ -84,12 +83,12 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
   let shownKey = null;
   let loadingUrl = null;
   let imageLoaded = false;
+  let failedShown = false;
   let lastEntryId = null;
   let expanded = false;
   let cardKey = null;
   let pressTimer = null;
   let held = false;
-  let toastTimer = null;
   let closed = false;
   let pagerCount = null;
 
@@ -127,6 +126,9 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     shownKey = key;
     loadingUrl = null;
     imageLoaded = false;
+    failedShown = false;
+    failedText.hidden = true;
+    failedText.textContent = '';
     lastEntryId = story.entry.id;
     image.removeAttribute('src');
     frame.classList.add('is-loading');
@@ -140,6 +142,15 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     caption.hidden = story.entry.text === '';
     setExpanded(false);
     renderProgress(story, false);
+  }
+
+  /** Görseli açılmayan story: kutu yüklenirken olduğu gibi kalır, ortada yazı çıkar, çizgi story süresince dolar. */
+  function showFailed(story) {
+    failedShown = true;
+    failedText.textContent = 'görsel açılmadı';
+    failedText.hidden = false;
+    backdrop.removeAttribute('src');
+    renderProgress(story, true);
   }
 
   function preloadNext() {
@@ -243,19 +254,11 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     frame.hidden = false;
     const key = storyKey(story);
     if (key !== shownKey) showStory(story, key);
+    if (story.status === 'failed' && !failedShown) showFailed(story);
     if (story.status === 'ready' && loadingUrl !== story.resolvedUrl) loadImage(story, key);
-    spinner.hidden = imageLoaded;
+    spinner.hidden = imageLoaded || failedShown;
     counter.textContent = `${state.pagePosition}/${state.pageStoryCount}`;
     if (imageLoaded) preloadNext();
-  }
-
-  function showToast(message) {
-    toast.textContent = message;
-    toast.hidden = false;
-    win.clearTimeout(toastTimer);
-    toastTimer = win.setTimeout(() => {
-      toast.hidden = true;
-    }, TOAST_MS);
   }
 
   // --- girdiler ---
@@ -318,11 +321,9 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     if (closed) return;
     closed = true;
     offChange();
-    offSkipped();
     win.removeEventListener('keydown', onKeyDown, true);
     doc.removeEventListener('visibilitychange', onVisibilityChange);
     win.clearTimeout(pressTimer);
-    win.clearTimeout(toastTimer);
     image.onload = null;
     image.onerror = null;
     host.remove();
@@ -352,7 +353,6 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
   win.addEventListener('keydown', onKeyDown, true);
   doc.addEventListener('visibilitychange', onVisibilityChange);
   const offChange = feed.on('change', render);
-  const offSkipped = feed.on('skipped', () => showToast('görsel açılmadı, geçildi'));
 
   const previousOverflow = doc.documentElement.style.overflow;
   doc.documentElement.style.overflow = 'hidden';

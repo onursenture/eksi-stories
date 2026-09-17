@@ -19,10 +19,8 @@ export function createStoryFeed({
   const stories = [];
   const seenEntryIds = new Set();
   const resolving = new WeakSet();
-  const announced = new WeakSet();
-  const listeners = { change: new Set(), skipped: new Set() };
+  const listeners = { change: new Set() };
   let index = 0;
-  let direction = 1;
   let knownPageCount = pageCount;
   let loading = false;
   let errorKind = null;
@@ -63,17 +61,6 @@ export function createStoryFeed({
         });
       });
     }
-  }
-
-  /** `start`tan `step` yönünde ilk başarısız olmayan index; geride yoksa -1, ileride yoksa >= length. */
-  function playableFrom(start, step) {
-    let i = start;
-    while (i >= 0 && i < stories.length && stories[i].status === 'failed') i += step;
-    return i;
-  }
-
-  function forwardFrom(start) {
-    return Math.min(playableFrom(Math.max(start, 0), 1), stories.length);
   }
 
   /** Son açılan görselin (yoksa sayımın başladığı) sayfasından sonra `emptyPageLimit` sayfa yüklendiyse önden okuma durur. */
@@ -130,32 +117,8 @@ export function createStoryFeed({
     if (stories.length - index - 1 < fetchAheadThreshold) fetchNextPage();
   }
 
-  function moveTo(newIndex, isNavigationMove = false) {
-    const oldIdx = index;
+  function moveTo(newIndex) {
     index = newIndex;
-
-    // Check for crossed failed stories (only for navigation moves, not start)
-    if (isNavigationMove) {
-      const step = newIndex > oldIdx ? 1 : -1;
-      const crossedFailed = [];
-      if (step > 0) {
-        for (let i = oldIdx + 1; i < newIndex; i++) {
-          if (stories[i].status === 'failed') crossedFailed.push(stories[i]);
-        }
-      } else if (step < 0) {
-        for (let i = oldIdx - 1; i > newIndex; i--) {
-          if (stories[i].status === 'failed') crossedFailed.push(stories[i]);
-        }
-      }
-
-      // Emit skipped for first unannnounced crossed failed story
-      const unannounced = crossedFailed.find(s => !announced.has(s));
-      if (unannounced) {
-        for (const s of crossedFailed) announced.add(s);
-        emit('skipped', unannounced);
-      }
-    }
-
     ensureAhead();
     emit('change');
   }
@@ -163,23 +126,19 @@ export function createStoryFeed({
   function start() {
     if (started) return;
     started = true;
-    moveTo(forwardFrom(0), false);
+    moveTo(0);
   }
 
   function next() {
-    direction = 1;
-    moveTo(forwardFrom(index + 1), true);
+    moveTo(Math.min(index + 1, stories.length));
   }
 
   function prev() {
-    direction = -1;
-    const previous = playableFrom(index - 1, -1);
-    moveTo(previous >= 0 ? previous : index, true);
+    moveTo(Math.max(index - 1, 0));
   }
 
   function goTo(target) {
-    direction = 1;
-    moveTo(forwardFrom(Math.min(target, stories.length)), true);
+    moveTo(Math.min(Math.max(target, 0), stories.length));
   }
 
   /** Sayfa tampondaysa istek atmadan oraya geçer; değilse tamponu o sayfadan yeniden kurar. */
@@ -189,8 +148,7 @@ export function createStoryFeed({
     if (target >= firstLoadedPage && target <= lastLoadedPage) {
       // Sayfa görselsizse sonraki sayfaların ilk story'sine geçilir.
       const first = stories.findIndex((story) => story.page >= target);
-      direction = 1;
-      moveTo(forwardFrom(first === -1 ? stories.length : first), false);
+      moveTo(first === -1 ? stories.length : first);
       return;
     }
     epoch += 1;
@@ -231,7 +189,7 @@ export function createStoryFeed({
         knownPageCount = result.count;
         lastLoadedPage = result.page;
         appendEntries(result.entries, result.page);
-        index = forwardFrom(0);
+        index = 0;
         ensureAhead();
       }),
       settle((error) => {
@@ -241,33 +199,11 @@ export function createStoryFeed({
     );
   }
 
+  /** Görseli açılmayan story atlanmaz: aktifse yerinde kalır, görüntüleyici onu story süresince gösterip geçer. */
   function markFailed(story) {
     if (disposed || story.status === 'failed') return;
     story.status = 'failed';
     story.resolvedUrl = null;
-    if (stories[index] === story) {
-      const oldIdx = index;
-      const behind = direction < 0 ? playableFrom(index - 1, -1) : -1;
-      index = behind >= 0 ? behind : forwardFrom(index + 1);
-
-      // Collect crossed failed stories (including the active story itself)
-      const step = index > oldIdx ? 1 : -1;
-      const crossedFailed = [story];
-      if (step > 0) {
-        for (let i = oldIdx + 1; i < index; i++) {
-          if (stories[i].status === 'failed') crossedFailed.push(stories[i]);
-        }
-      } else if (step < 0) {
-        for (let i = oldIdx - 1; i > index; i--) {
-          if (stories[i].status === 'failed') crossedFailed.push(stories[i]);
-        }
-      }
-
-      // Mark all crossed failed as announced
-      for (const s of crossedFailed) announced.add(s);
-
-      emit('skipped', story);
-    }
     ensureAhead();
     emit('change');
   }
@@ -301,7 +237,6 @@ export function createStoryFeed({
   function dispose() {
     disposed = true;
     listeners.change.clear();
-    listeners.skipped.clear();
   }
 
   function on(event, listener) {

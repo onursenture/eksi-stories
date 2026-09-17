@@ -72,6 +72,19 @@
   display: none;
 }
 
+/* Görseli açılmayan story: yazı yükleniyor kutusunun ortasında durur; üst bar ve alttaki yazı onun üstünde kalır. */
+.es-failed {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  left: 0;
+  margin: 0;
+  font-size: 16px;
+  text-align: center;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+
 .es-top,
 .es-caption {
   position: absolute;
@@ -367,16 +380,4 @@
 .es-pager-select:focus-visible {
   outline: 2px solid #fff;
   outline-offset: 2px;
-}
-
-.es-toast {
-  position: absolute;
-  bottom: calc(var(--es-strip) + 24px);
-  left: 50%;
-  padding: 8px 14px;
-  border-radius: 999px;
-  background: rgba(0, 0, 0, 0.75);
-  font-size: 13px;
-  transform: translateX(-50%);
-  pointer-events: none;
 }
