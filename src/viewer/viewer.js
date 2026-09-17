@@ -162,6 +162,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
       backdrop.src = url;
       renderProgress(story, true);
       preloadNext();
+      feed.markOpened(story);
     };
     image.onerror = () => {
       if (closed || shownKey !== key || loadingUrl !== url) return;
@@ -189,7 +190,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     if (state.loading) {
       text = state.jumping ? 'sayfa yükleniyor…' : 'sonraki sayfa yükleniyor…';
     } else if (state.blocked) {
-      text = `${EMPTY_PAGE_LIMIT} sayfadır görsel yok`;
+      text = `${EMPTY_PAGE_LIMIT} sayfadır açılan görsel yok`;
       actions.push(actionButton('aramaya devam', () => feed.continueSearching()));
     } else if (state.errorKind === 'fetch') {
       text = 'sayfa gelmedi';

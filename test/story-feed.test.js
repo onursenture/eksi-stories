@@ -15,6 +15,10 @@ const entry = (id, imageIds = []) => ({
   images: imageIds.map((imageId) => ({ kind: 'eksi', id: imageId, sourceHref: `https://soz.lk/i/${imageId}` })),
 });
 const noImagePage = () => [entry(String(entrySeq++))];
+/** `from`–`to` sayfalarının her birinde görseli açılmayan tek entry; görsel kimliği `x<sayfa>`. */
+const brokenPages = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => [entry(String(from + i), [`x${from + i}`])]);
+/** `fakeResolver`'da açılmayacak `x1`–`x<to>` kimlikleri. */
+const brokenIds = (to) => Array.from({ length: to }, (_, i) => `x${i + 1}`);
 
 function fakeResolver(fail = []) {
   const calls = [];
@@ -485,4 +489,101 @@ test('kapatıldıktan sonra reddedilen sayfa isteği hata durumu yaratmaz', asyn
   await flush();
   assert.equal(loading.state.errorKind, null);
   assert.equal(jumping.state.errorKind, null);
+});
+
+test('görselleri açılmayan sayfalar da 5 sayfa sınırına sayılır', async () => {
+  const { feed, pageSource } = makeFeed({
+    entries: [entry('1', ['x1'])],
+    results: brokenPages(2, 11),
+    count: 12,
+    fail: brokenIds(11),
+  });
+  feed.start();
+  for (let i = 0; i < 8; i += 1) await flush();
+  assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6]);
+  assert.equal(feed.current(), null);
+  assert.equal(feed.state.blocked, true);
+  assert.equal(feed.state.ended, false);
+
+  feed.continueSearching();
+  for (let i = 0; i < 8; i += 1) await flush();
+  assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
+  assert.equal(feed.state.blocked, true);
+});
+
+test('görsel açılınca sayım o görselin sayfasından yeniden başlar', async () => {
+  const results = brokenPages(2, 12);
+  results[2] = [entry('4', ['ok4'])]; // 4. sayfanın görseli açılır
+  const { feed, pageSource } = makeFeed({
+    entries: [entry('1', ['x1'])],
+    results,
+    count: 13,
+    fail: brokenIds(12),
+  });
+  feed.start();
+  for (let i = 0; i < 8; i += 1) await flush();
+  assert.equal(feed.current().ref.id, 'ok4');
+  assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6]);
+  assert.equal(feed.state.blocked, true, 'sınır dolu, 4. sayfanın görseli henüz açılmadı');
+
+  feed.markOpened(feed.current());
+  for (let i = 0; i < 8; i += 1) await flush();
+  assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6, 7]);
+  assert.equal(feed.state.blocked, false);
+
+  feed.next();
+  for (let i = 0; i < 8; i += 1) await flush();
+  assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6, 7, 8, 9]);
+  assert.equal(feed.current(), null);
+  assert.equal(feed.state.blocked, true);
+});
+
+test('aktif olmayan story için markOpened yok sayılır', async () => {
+  const { feed, pageSource } = makeFeed({
+    entries: [entry('1', ['x1'])],
+    results: brokenPages(2, 11),
+    count: 12,
+    fail: brokenIds(11),
+  });
+  feed.start();
+  for (let i = 0; i < 8; i += 1) await flush();
+  assert.equal(feed.state.blocked, true);
+
+  feed.markOpened(feed.peek(-1));
+  for (let i = 0; i < 8; i += 1) await flush();
+  assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6]);
+  assert.equal(feed.state.blocked, true);
+});
+
+test('sınır son sayfada dolarsa başlık biter', async () => {
+  const { feed, pageSource } = makeFeed({
+    entries: [entry('1', ['a'])],
+    results: [noImagePage(), noImagePage(), noImagePage(), noImagePage(), noImagePage()],
+    count: 6,
+  });
+  feed.start();
+  feed.next();
+  for (let i = 0; i < 6; i += 1) await flush();
+  assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6]);
+  assert.equal(feed.state.blocked, false);
+  assert.equal(feed.state.ended, true);
+});
+
+test('atlamada açılan görselin sayfası sıfırlanır', async () => {
+  const { feed, pageSource } = makeJumpFeed({
+    entries: [entry('1', ['a', 'b', 'c', 'd'])],
+    count: 30,
+    pages: { 10: [entry('10', ['j1', 'j2', 'j3', 'j4'])] },
+  });
+  feed.start();
+  feed.goToPage(10);
+  await flush();
+  assert.equal(feed.current().ref.id, 'j1');
+  feed.markOpened(feed.current());
+
+  feed.goToPage(3);
+  for (let i = 0; i < 8; i += 1) await flush();
+  assert.deepEqual(pageSource.loads, [10, 3]);
+  assert.deepEqual(pageSource.nexts, [4, 5, 6, 7, 8]);
+  assert.equal(feed.state.blocked, true);
 });

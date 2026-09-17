@@ -35,6 +35,36 @@ function setup(entries, { count = 1, pages = {} } = {}) {
   return { dom, doc: dom.window.document, requests, fetchImpl };
 }
 
+/** `from`–`to` sayfalarının istek adresleri. */
+const pageUrls = (from, to) => Array.from({ length: to - from + 1 }, (_, i) => `${PAGE_URL}?p=${from + i}`);
+
+/** Sahte saatli sayfa isteği sırası: beklemeler hemen biter ve `clock.sleeps`'e yazılır. */
+function fakeClockQueue() {
+  const clock = { t: 0, sleeps: [] };
+  const pageQueue = createPageQueue({
+    now: () => clock.t,
+    sleep: async (ms) => {
+      clock.sleeps.push(ms);
+      clock.t += ms;
+    },
+  });
+  return { clock, pageQueue };
+}
+
+/** 30 sayfalık başlık, sayfa başına dört görsel. `/img/` istekleri 404 döner; kimliği `acilan` ile başlayan görseller açılır. `pages` sayfaları değiştirir. */
+function brokenImagesSetup(pages = {}) {
+  const allPages = Object.fromEntries(Array.from({ length: 29 }, (_, i) => [i + 2, pageEntries(i + 2)]));
+  const tab = setup(pageEntries(1), { count: 30, pages: { ...allPages, ...pages } });
+  const fetchImpl = async (url, init) => {
+    if (url.startsWith('https://eksisozluk.com/img/') && !url.startsWith('https://eksisozluk.com/img/acilan')) {
+      tab.requests.push(url);
+      return { ok: false, status: 404, text: async () => '' };
+    }
+    return tab.fetchImpl(url, init);
+  };
+  return { ...tab, fetchImpl };
+}
+
 test('başlık sayfasına görsel sayısıyla tek buton eklenir', async () => {
   const { doc, fetchImpl, requests } = setup([
     { id: '101', content: `${link('https://soz.lk/i/aaa111', 'görsel')} ${link('/img/aaa111')}` },
@@ -278,4 +308,59 @@ test('kapatıp hemen yeniden açınca kapanan oturumun sayfası istenmez, sayfa 
   const shadow = doc.querySelector('eksi-stories-viewer').shadowRoot;
   assert.equal(shadow.querySelector('.es-author-name').textContent, 'sayfa 1 yazarı');
   assert.equal(shadow.querySelector('.es-counter').textContent, '1/1');
+});
+
+test('görselleri açılmayan başlıkta gizli sekme 5 sayfadan sonra durur', async () => {
+  const { dom, doc, requests, fetchImpl } = brokenImagesSetup();
+  const { clock, pageQueue } = fakeClockQueue();
+  const imagePages = deferred();
+  const heldFetch = async (url, init) => {
+    if (url.startsWith('https://eksisozluk.com/img/')) await imagePages.promise;
+    return fetchImpl(url, init);
+  };
+  await main({ cssUrl: CSS_URL, doc, fetchImpl: heldFetch, pageQueue });
+  doc.querySelector('.eksi-stories-button').click();
+  for (let i = 0; i < 4; i += 1) await flush();
+
+  const shadow = doc.querySelector('eksi-stories-viewer').shadowRoot;
+  const pageRequests = () => requests.filter((url) => url.startsWith(`${PAGE_URL}?`));
+  Object.defineProperty(doc, 'hidden', { configurable: true, get: () => true });
+  doc.dispatchEvent(new dom.window.Event('visibilitychange'));
+  assert.equal(shadow.querySelector('.es-root').classList.contains('is-paused'), true, 'gizli sekmede ekran durur');
+  assert.deepEqual(pageRequests(), [], 'görsel sayfaları yanıt vermeden sayfa istenmez');
+
+  imagePages.resolve();
+  for (let i = 0; i < 10; i += 1) await flush();
+  assert.deepEqual(pageRequests(), pageUrls(2, 6));
+  assert.equal(requests.filter((url) => url.startsWith('https://eksisozluk.com/img/')).length, 24);
+  assert.deepEqual(clock.sleeps, [1500, 1500, 1500, 1500]);
+  assert.equal(shadow.querySelector('.es-card-text').textContent, '5 sayfadır açılan görsel yok');
+  const continueButton = [...shadow.querySelectorAll('.es-card-actions button')].find((button) => button.textContent === 'aramaya devam');
+  assert.ok(continueButton, 'aramaya devam butonu var');
+
+  continueButton.click();
+  for (let i = 0; i < 10; i += 1) await flush();
+  assert.deepEqual(pageRequests(), pageUrls(2, 11));
+  assert.equal(shadow.querySelector('.es-card-text').textContent, '5 sayfadır açılan görsel yok');
+});
+
+test('görsel açılınca önden okuma o görselin sayfasından sürer', async () => {
+  const { dom, doc, requests, fetchImpl } = brokenImagesSetup({
+    6: [{ id: '601', author: 'sayfa 6 yazarı', content: link('https://soz.lk/i/acilan601') }],
+  });
+  const { pageQueue } = fakeClockQueue();
+  await main({ cssUrl: CSS_URL, doc, fetchImpl, pageQueue });
+  doc.querySelector('.eksi-stories-button').click();
+  for (let i = 0; i < 10; i += 1) await flush();
+
+  const shadow = doc.querySelector('eksi-stories-viewer').shadowRoot;
+  const image = shadow.querySelector('.es-image');
+  const pageRequests = () => requests.filter((url) => url.startsWith(`${PAGE_URL}?`));
+  assert.equal(shadow.querySelector('.es-author-name').textContent, 'sayfa 6 yazarı');
+  assert.equal(image.getAttribute('src'), 'https://cdn.eksisozluk.com/acilan601.jpg');
+  assert.deepEqual(pageRequests(), pageUrls(2, 6), 'görsel açılmadan sınır dolar');
+
+  image.dispatchEvent(new dom.window.Event('load')); // jsdom görsel yüklemez, açılma elle tetiklenir
+  for (let i = 0; i < 10; i += 1) await flush();
+  assert.deepEqual(pageRequests(), pageUrls(2, 7));
 });

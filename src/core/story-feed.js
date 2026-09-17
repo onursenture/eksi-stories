@@ -25,13 +25,14 @@ export function createStoryFeed({
   let direction = 1;
   let knownPageCount = pageCount;
   let loading = false;
-  let blocked = false;
-  let emptyStreak = 0;
   let errorKind = null;
   let started = false;
   let disposed = false;
   let firstLoadedPage = page;
   let lastLoadedPage = page;
+  // Önden okuma sınırı bu iki sayfanın büyüğünden sayılır: sayımın başladığı sayfa ve görseli açılan en ileri sayfa (henüz yoksa 0).
+  let searchFromPage = page;
+  let lastOpenedPage = 0;
   // Her sayfa atlamasında artar; atlamadan önce başlamış arka plan yüklemesinin sonucu yok sayılır.
   let epoch = 0;
   let jumping = false;
@@ -47,7 +48,6 @@ export function createStoryFeed({
   }
 
   function appendEntries(list, pageNumber) {
-    let added = 0;
     for (const entry of list) {
       if (seenEntryIds.has(entry.id)) continue;
       seenEntryIds.add(entry.id);
@@ -61,10 +61,8 @@ export function createStoryFeed({
           resolvedUrl: null,
           status: 'pending',
         });
-        added += 1;
       });
     }
-    return added;
   }
 
   /** `start`tan `step` yönünde ilk başarısız olmayan index; geride yoksa -1, ileride yoksa >= length. */
@@ -76,6 +74,16 @@ export function createStoryFeed({
 
   function forwardFrom(start) {
     return Math.min(playableFrom(Math.max(start, 0), 1), stories.length);
+  }
+
+  /** Son açılan görselin (yoksa sayımın başladığı) sayfasından sonra `emptyPageLimit` sayfa yüklendiyse önden okuma durur. */
+  function searchLimitReached() {
+    return lastLoadedPage - Math.max(searchFromPage, lastOpenedPage) >= emptyPageLimit;
+  }
+
+  /** Önden okuma sınırda durdu ama başlıkta sonraki sayfa var; "aramaya devam" beklenir. */
+  function isBlocked() {
+    return pageSource.hasNext() && searchLimitReached();
   }
 
   function resolveStory(story) {
@@ -93,7 +101,7 @@ export function createStoryFeed({
   }
 
   function fetchNextPage() {
-    if (loading || blocked || errorKind !== null || !pageSource.hasNext()) return;
+    if (loading || errorKind !== null || !pageSource.hasNext() || searchLimitReached()) return;
     loading = true;
     const requestEpoch = epoch;
     pageSource.next().then(
@@ -102,9 +110,7 @@ export function createStoryFeed({
         loading = false;
         knownPageCount = result.count;
         lastLoadedPage = result.page;
-        const added = appendEntries(result.entries, result.page);
-        emptyStreak = added > 0 ? 0 : emptyStreak + 1;
-        if (emptyStreak >= emptyPageLimit) blocked = true;
+        appendEntries(result.entries, result.page);
         ensureAhead();
         emit('change');
       },
@@ -191,9 +197,9 @@ export function createStoryFeed({
     jumping = true;
     jumpTarget = target;
     loading = true;
-    blocked = false;
     errorKind = null;
-    emptyStreak = 0;
+    searchFromPage = target;
+    lastOpenedPage = 0;
     failedJump = null;
     stories.length = 0;
     seenEntryIds.clear();
@@ -266,10 +272,17 @@ export function createStoryFeed({
     emit('change');
   }
 
+  /** Görüntüleyici aktif story'nin görseli açılınca çağırır; önden okuma sınırı bu görselin sayfasından yeniden sayılır. */
+  function markOpened(story) {
+    if (disposed || stories[index] !== story || story.page <= lastOpenedPage) return;
+    lastOpenedPage = story.page;
+    ensureAhead();
+    emit('change');
+  }
+
   function continueSearching() {
-    if (!blocked) return;
-    blocked = false;
-    emptyStreak = 0;
+    if (!isBlocked()) return;
+    searchFromPage = lastLoadedPage;
     ensureAhead();
     emit('change');
   }
@@ -322,6 +335,7 @@ export function createStoryFeed({
     goTo,
     goToPage,
     markFailed,
+    markOpened,
     continueSearching,
     retry,
     dispose,
@@ -330,6 +344,7 @@ export function createStoryFeed({
     peek: (offset = 1) => stories[index + offset] ?? null,
     get state() {
       const story = stories[index] ?? null;
+      const blocked = isBlocked();
       return {
         index,
         length: stories.length,
