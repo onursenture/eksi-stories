@@ -587,3 +587,20 @@ test('atlamada açılan görselin sayfası sıfırlanır', async () => {
   assert.deepEqual(pageSource.nexts, [4, 5, 6, 7, 8]);
   assert.equal(feed.state.blocked, true);
 });
+
+test('tampondaki sayfaya geçiş sayfa sınırını sıfırlamaz', async () => {
+  const { feed, pageSource } = makeFeed({
+    entries: [entry('1', ['x1'])],
+    results: brokenPages(2, 11),
+    count: 12,
+    fail: brokenIds(11),
+  });
+  feed.start();
+  for (let i = 0; i < 8; i += 1) await flush();
+  assert.equal(feed.state.blocked, true);
+
+  feed.goToPage(3);
+  for (let i = 0; i < 8; i += 1) await flush();
+  assert.deepEqual(pageSource.calls, [2, 3, 4, 5, 6]);
+  assert.equal(feed.state.blocked, true);
+});
