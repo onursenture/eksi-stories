@@ -91,6 +91,54 @@ test('başlık sayfası değilse buton eklenmez ve istek atılmaz', async () => 
   assert.equal(dom.window.document.querySelector('.eksi-stories-button'), null);
 });
 
+/** `console.warn` çağrılarını toplar; `restore()` eski haline döndürür. */
+function captureWarnings() {
+  const warnings = [];
+  const original = console.warn;
+  console.warn = (...args) => warnings.push(args.join(' '));
+  return { warnings, restore: () => { console.warn = original; } };
+}
+
+test("ekşi'nin boş sonuç sayfasında uyarı yazılmaz, buton eklenmez", async () => {
+  const html = `<!DOCTYPE html><html><body><div id="main"><div id="content"><section id="content-body"><div id="topic">
+    <h1 id="title" data-title="deneme başlığı" data-id="1000001" data-slug="deneme-basligi"><a href="/deneme-basligi--1000001"><span>deneme başlığı</span></a></h1>
+    <div class="clearfix sub-title-container"></div>
+    <p>bu başlıkta aradığınız kriterlere uygun giriş bulunamadı.</p>
+  </div></section></div></div></body></html>`;
+  const dom = new JSDOM(html, { url: `${PAGE_URL}?focusto=186473806` });
+  const { warnings, restore } = captureWarnings();
+  try {
+    await main({
+      cssUrl: CSS_URL,
+      doc: dom.window.document,
+      fetchImpl: async () => {
+        throw new Error('istek atılmamalı');
+      },
+    });
+  } finally {
+    restore();
+  }
+  assert.deepEqual(warnings, []);
+  assert.equal(dom.window.document.querySelector('.eksi-stories-button'), null);
+});
+
+test('başlık adresinde başlık yapısı bulunamazsa uyarı yazılır', async () => {
+  const dom = new JSDOM('<html><body><div id="topic"><h1>deneme başlığı</h1></div></body></html>', { url: PAGE_URL });
+  const { warnings, restore } = captureWarnings();
+  try {
+    await main({
+      cssUrl: CSS_URL,
+      doc: dom.window.document,
+      fetchImpl: async () => {
+        throw new Error('istek atılmamalı');
+      },
+    });
+  } finally {
+    restore();
+  }
+  assert.deepEqual(warnings, ['[eksi-stories] başlık sayfası tanınmadı, buton eklenmedi.']);
+});
+
 test('butona tıklayınca viewer açılır, ilk görsel çözülür, Esc ile kapanır', async () => {
   const { dom, doc, requests, fetchImpl } = setup([
     { id: '101', author: 'ilk yazar', content: `merhaba ${link('https://soz.lk/i/aaa111', 'görsel')}` },

@@ -23,7 +23,8 @@ export async function main({
   pageQueue = createPageQueue(),
 }) {
   if (!isTopicPage(doc)) {
-    if (TOPIC_PATH.test(doc.location.pathname)) {
+    // ekşi'nin boş sonuç sayfasında ("aradığınız kriterlere uygun giriş bulunamadı") başlık var, entry listesi yok: uyarı gerekmez.
+    if (TOPIC_PATH.test(doc.location.pathname) && !doc.querySelector('#title[data-id]')) {
       console.warn('[eksi-stories] başlık sayfası tanınmadı, buton eklenmedi.');
     }
     return;
