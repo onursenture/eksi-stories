@@ -1,7 +1,7 @@
 # sayfa istek sırasının sınırları: tasarım
 
 Tarih: 2026-09-17
-Durum: Onaylandı (brainstorming sonucu).
+Durum: Onaylandı (brainstorming sonucu). Plan yazılırken §5'teki test beklentisi netleştirildi. Son incelemeden sonra §2.1, §2.2 ve §7 düzeltildi: görseli açılmayan story gizli sekmede de atlanır ve sayfa isteyebilir.
 
 ## 1. Sorun
 
@@ -15,17 +15,18 @@ Durum: Onaylandı (brainstorming sonucu).
 
 ### 2.1 Sekmeler arası
 
-- Arka plandaki sekmede story ilerlemez: görüntüleyici `visibilitychange` ile durur (`src/viewer/viewer.js`), ilerleme çizgisinin animasyonu bitmez, `feed.next()` çağrılmaz.
-- Arka planda yalnızca başlamış bir okuma zinciri sürer: sayfa yanıtı gelince `ensureAhead()` önde 3'ten az story varsa sonraki sayfayı ister, zincir 5 ardışık görselsiz sayfada durur (`src/core/story-feed.js`). Zincirin istekleri o sekmenin sırasında en az 1500 ms arayla gider.
-- En kötü durumda iki sekmede aynı anda 2 sayfa isteği uçuşta olur, herhangi bir 1,5 sn içinde en fazla 2 istek başlar. Bu, iki ekşi sayfasını aynı anda açmakla aynı mertebededir.
+- Arka plandaki sekmede görüntüleyici `visibilitychange` ile durur (`src/viewer/viewer.js`): ilerleme çizgisinin animasyonu bitmez, `feed.next()` çağrılmaz.
+- Story yine de görsel açılmayınca ilerler: `/img/` hatası ya da `<img>` `onerror`, `feed.markFailed`'i çağırır; o da story'yi atlatır ve `ensureAhead()` ile gerekirse sonraki sayfayı ister (`src/core/story-feed.js`).
+- Arka planda başlamış okuma zinciri ve açılmayan görselleri atlama sürer. Zincir 5 ardışık görselsiz sayfada durur, ama görselleri açılmayan sayfalar görselsiz sayılmaz: böyle sayfalar art arda gelirse istekler başlığın sonuna ya da açılan ilk görsele kadar sürer. İstekler her durumda o sekmenin sırasında en az 1500 ms arayla gider. Son incelemede jsdom'da denendi: 30 sayfalık, sayfa başına 4 soz.lk görselli ve bütün `/img/` istekleri 404 dönen başlıkta gizli sekme hiç dokunulmadan 2–30. sayfaları istedi (29 sayfa, 120 `/img/` isteği); görseller açılınca aynı sekme hiç sayfa istemedi.
+- En kötü durumda N sekmede aynı anda en fazla N sayfa isteği uçuşta olur; iki sekmede herhangi bir 1,5 sn içinde en fazla 2 istek başlar. Bu, iki ekşi sayfasını aynı anda açmakla aynı mertebededir.
 - Eklentinin ekşi'ye giden daha büyük akışı `/img/<id>` istekleridir. Görsel çözümleyici de `main()` içinde sekme başına kurulur, istekleri arasında aralık yoktur, en fazla ikişer gider. Yalnızca sayfa isteklerini sekmeler arasında bağlamak "siteyi yormaz"ı belirgin biçimde güçlendirmez. README'deki "ikişer" sözü de sekme başınadır.
-- Sonuç: yük riski düşük. README cümlesi kapsamını söylemediği için eksik. Store yazıları ve PRIVACY istek sayısı vermez.
+- Sonuç: sekme başına aralık kuralı her durumda tutar, iki sekmenin birlikte yükü düşük. README cümlesi kapsamını söylemediği için eksik. Store yazıları ve PRIVACY istek sayısı vermez. Görselleri açılmayan başlıkta gizli sekmenin uzun süre sayfa istemesi sekmeler arası sırayla çözülmez; bu daldan önce de var olan ayrı bir konudur (bkz. §7).
 
 ### 2.2 `focusto` gezintisi
 
 - Çakışma yalnızca kapatma anında bir sayfa isteği gerçekten uçuştaysa olur ve o isteğin yanıt süresi kadar sürer (genelde bir saniyeden kısa). Kapatma 1500 ms aralık ya da 5000 ms tekrar beklemesi sırasındaysa `dispose()` sonrasında istek gitmez.
 - Gezinti, kullanıcının entry linkine tıklamasıyla aynı sayfa görüntülemedir. Uçuştaki istek zaten gönderilmiştir; yeni sayfa gelince tarayıcının onu kesmesi ek yük getirmez.
-- Yeni sayfanın boş sırayla başlaması her gezintide böyledir, kullanıcı ekşi'nin kendi sayfa linkine bastığında da. Aralık kuralının bozulması için eski isteğin başlangıcından sonraki 1,5 sn içinde yeni sayfanın yüklenmesi, butona basılması ve açılan sayfada en fazla 3 görsel olması (açılışta önden sayfa istenir) gerekir. Olsa da tek istek birkaç yüz ms erken gider.
+- Yeni sayfanın boş sırayla başlaması her gezintide böyledir, kullanıcı ekşi'nin kendi sayfa linkine bastığında da. Aralık kuralının bozulması için eski isteğin başlangıcından sonraki 1,5 sn içinde yeni sayfanın yüklenmesi, butona basılması ve hemen bir sayfa isteği doğması gerekir: açılan sayfada en fazla 3 görsel olması (açılışta önden sayfa istenir), ilk görsellerin hemen açılmaması ya da » ile sayfa değiştirilmesi. Bu sürede insan eliyle pek olmaz; olsa da tek istek birkaç yüz ms erken gider.
 - Gezintiyi geciktirmenin bedeli gerçektir: ekran kalkar, sayfa bir süre yerinde durur, kullanıcı kaydırırken ya da tıklarken birden başka sayfaya gidilir.
 - Sonuç: risk çok düşük.
 
@@ -95,6 +96,7 @@ Yeni test: `sistem saati geri alınsa da aralık beklemesi 1500 ms'yi geçmez`.
 ## 7. Kapsam dışı
 
 - Sekmeler arası ortak sayfa sırası ve `/img/` isteklerini sekmeler arasında sınırlamak (bkz. §3).
+- Görselleri açılmayan sayfaların 5 görselsiz sayfa sınırına sayılmaması ve açılmayan görselleri atlamanın gizli sekmede de sürmesi (bkz. §2.1). Bu daldan önce de vardır, ayrı tasarım ister.
 - `focusto` gezintisinin zamanlaması ve yeni sayfaya sıra durumu taşımak (bkz. §3).
 - Kapatınca uçuştaki isteği ya da 5000 ms tekrar beklemesini kesmek (`2026-09-17-ortak-istek-sirasi-design.md` §2, kullanıcı kararı).
 
