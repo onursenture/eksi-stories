@@ -172,3 +172,52 @@ test("açılış sayfasındaki entry'de kapatınca başka adrese gidilmez", asyn
   assert.deepEqual(navigations, []);
   assert.equal(doc.activeElement, doc.querySelector('.eksi-stories-button'));
 });
+
+test('seçim kutusundan sayfa seçilince yalnızca o sayfa istenir, odak story ekranına döner', async () => {
+  const { dom, doc, requests, fetchImpl } = setup(pageEntries(1), { count: 3, pages: { 3: pageEntries(3) } });
+  await main({ cssUrl: CSS_URL, doc, fetchImpl });
+  doc.querySelector('.eksi-stories-button').click();
+  await flush();
+  await flush();
+
+  const shadow = doc.querySelector('eksi-stories-viewer').shadowRoot;
+  const root = shadow.querySelector('.es-root');
+  const select = shadow.querySelector('.es-pager-select');
+
+  select.focus();
+  assert.equal(root.classList.contains('is-paused'), true);
+  assert.equal(shadow.querySelector('.es-paused').hidden, false);
+
+  select.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true, composed: true }));
+  assert.equal(shadow.querySelector('.es-counter').textContent, '1/4');
+
+  select.value = '3';
+  select.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  assert.equal(shadow.activeElement, root);
+  assert.equal(root.classList.contains('is-paused'), false);
+
+  for (let i = 0; i < 4; i += 1) await flush();
+
+  const pageRequests = requests.filter((url) => url.startsWith(`${PAGE_URL}?`));
+  assert.deepEqual(pageRequests, [`${PAGE_URL}?p=3`]);
+  assert.equal(shadow.querySelector('.es-author-name').textContent, 'sayfa 3 yazarı');
+  assert.equal(select.value, '3');
+  assert.equal(shadow.querySelector('.es-counter').textContent, '1/4');
+});
+
+test('sayfa sayısı değişmedikçe seçim kutusunun seçenekleri yeniden kurulmaz', async () => {
+  const { dom, doc, fetchImpl } = setup(pageEntries(1), { count: 3 });
+  await main({ cssUrl: CSS_URL, doc, fetchImpl });
+  doc.querySelector('.eksi-stories-button').click();
+  await flush();
+  await flush();
+
+  const shadow = doc.querySelector('eksi-stories-viewer').shadowRoot;
+  const select = shadow.querySelector('.es-pager-select');
+  const firstOption = select.options[0];
+
+  dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
+  assert.equal(shadow.querySelector('.es-counter').textContent, '2/4');
+  assert.equal(select.options.length, 3);
+  assert.equal(select.options[0], firstOption);
+});

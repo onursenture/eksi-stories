@@ -338,6 +338,9 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     else avatar.hidden = true;
   });
   pagerSelect.addEventListener('change', () => changePage(Number(pagerSelect.value)));
+  // Seçim kutusu açıkken story ilerlemez; sayfa seçilince ya da ekrana tıklanınca odak gider ve devam eder.
+  pagerSelect.addEventListener('focus', () => setPaused('pager', true));
+  pagerSelect.addEventListener('blur', () => setPaused('pager', false));
   pagerPrev.addEventListener('click', () => changePage(feed.state.page - 1));
   pagerNext.addEventListener('click', () => changePage(feed.state.page + 1));
   pagerLast.addEventListener('click', () => changePage(feed.state.pageCount));
