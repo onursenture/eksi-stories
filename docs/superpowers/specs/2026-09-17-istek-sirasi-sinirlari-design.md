@@ -66,7 +66,7 @@ Yeni test: `sistem saati geri alınsa da aralık beklemesi 1500 ms'yi geçmez`.
 - Sıra `now` verilmeden, sahte `sleep` ile kurulur. `sleep` her bekleme süresini bir listeye yazar ve hemen döner.
 - `pace`, sözleşmesine uygun olarak `run` işinin içinden çağrılır: `queue.run(() => queue.pace(signal), signal)`. `signal`, hiç iptal edilmeyen bir `AbortController`'dan gelir.
 - İlk `run` bittikten sonra `Date.now`, `t.mock.method(Date, 'now', ...)` ile gerçek değerinin bir saat gerisini döndürür. Mock test bitince kendiliğinden geri alınır. Sonra ikinci `run` çalışır.
-- Beklenen: listedeki her bekleme en fazla 1500 ms'dir. Bugünkü kodda ikinci bekleme yaklaşık 3.601.500 ms olduğu için test başarısız olur.
+- Beklenen: listede tek bir bekleme olur, 0'dan büyüktür ve 1500 ms'yi geçmez. Tek bekleme şartı, varsayılan saatle aralığın hâlâ beklendiğini de sabitler. Bugünkü kodda bu bekleme yaklaşık 3.601.500 ms olduğu için test başarısız olur.
 - Mevcut testler saati dışarıdan verir ve değişmez. `test/main.smoke.test.js`'te `pageQueue` verilmeyen testler varsayılan sırayı gerçek `performance.now()` ile kullanır.
 
 ## 6. Belgeler
