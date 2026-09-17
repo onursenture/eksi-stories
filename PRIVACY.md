@@ -1,6 +1,6 @@
 # gizlilik: stories for ekşi sözlük
 
-son güncelleme: 16.09.2026
+son güncelleme: 17.09.2026
 
 stories for ekşi sözlük kişisel veri toplamaz, satmaz, kimseyle paylaşmaz.
 
@@ -8,7 +8,7 @@ stories for ekşi sözlük kişisel veri toplamaz, satmaz, kimseyle paylaşmaz.
 
 - sadece `https://eksisozluk.com` sayfalarında çalışır.
 - açık başlık sayfasındaki entry yazılarını, yazar adlarını ve avatarlarını, tarihleri ve görsel linklerini okur, görselleri tam ekran gösterir. avatarlar ekşi'nin görsel sunucusundan yüklenir.
-- ilerledikçe aynı başlığın sonraki sayfalarını ve ekşi görsel sayfalarını (`/img/…`) senin tarayıcından, senin oturumunla eksisozluk.com'dan ister. bu istekler o sayfaları kendin açınca gidenlerle aynı.
+- ilerledikçe ya da sayfa kutusundan seçtikçe aynı başlığın diğer sayfalarını ve ekşi görsel sayfalarını (`/img/…`) senin tarayıcından, senin oturumunla eksisozluk.com'dan ister. bu istekler o sayfaları kendin açınca gidenlerle aynı.
 
 ## nerede tutar
 

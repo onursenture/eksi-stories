@@ -89,6 +89,7 @@ Gerçek örnekler:
 - `.es-pager` `.es-stage`'in kardeşidir; dokunma ve basılı tutma olayları ona ulaşmaz.
 - Gösterge ile sayfa değişince odak story ekranına (`.es-root`) döner; ← → ve boşluk hemen çalışır.
 - Klavye kısayolları (← → boşluk) olay yolunda `select` varken çalışmaz; seçim kutusu okları kendisi kullanır. Esc her zaman kapatır.
+- Seçim kutusu odaktayken story durur (❚❚ görünür); sayfa seçilince ya da ekrana tıklanınca odak gider ve devam eder (kullanıcı kararı, 17.09.2026).
 
 ## 6. Sayfa atlama ve istek kuralları
 
@@ -183,9 +184,13 @@ Açıklamada `• her görselde yazar, tarih ve entry'ye git linki var.` satır�
 
 Gizlilik formunda `açıklama: entry yazıları, yazar adları, tarihler ve görsel linkleri` → `açıklama: entry yazıları, yazar adları ve avatarları, tarihler ve görsel linkleri`.
 
+İzin gerekçesinde `başlığın sonraki sayfalarını` → `başlığın diğer sayfalarını` (son inceleme sonrası, kullanıcı onayı 17.09.2026).
+
 ### `PRIVACY.md` değişikliği
 
 `- açık başlık sayfasındaki entry yazılarını, yazar adlarını, tarihleri ve görsel linklerini okur, görselleri tam ekran gösterir.` → `- açık başlık sayfasındaki entry yazılarını, yazar adlarını ve avatarlarını, tarihleri ve görsel linklerini okur, görselleri tam ekran gösterir. avatarlar ekşi'nin görsel sunucusundan yüklenir.`
+
+`son güncelleme: 16.09.2026` → `son güncelleme: 17.09.2026`; `- ilerledikçe aynı başlığın sonraki sayfalarını …` → `- ilerledikçe ya da sayfa kutusundan seçtikçe aynı başlığın diğer sayfalarını …` (son inceleme sonrası, kullanıcı onayı 17.09.2026).
 
 ### `CHANGELOG.md` değişikliği
 
@@ -205,7 +210,7 @@ Gizlilik formunda `açıklama: entry yazıları, yazar adları, tarihler ve gör
 - `test/entry-parser.test.js`: kişisel avatar mutlak adres olarak okunur; `//ekstat.com/img/default-profile-picture-dark.svg` → `https://ekstat.com/img/default-profile-picture-dark.svg`; `…-light.svg` → koyu sürüm; avatar yoksa `DEFAULT_AVATAR_URL`. Mevcut entry alanı testi `avatarUrl` alanını içerir.
 - `test/page-source.test.js`: `load(3)` doğru adresi ister ve sonrasında `next()` sayfa 4'ü ister; `load` ile `next` arasında 1500 ms aralık; eşzamanlı `load` ve `next` aynı anda tek istek; `load` 5xx'te bir kez tekrar dener; `load` sonrası `hasNext()` güncellenir; sürmekte olan `next()` ile aynı sayfayı isteyen `load` ve art arda iki aynı `load` tek istek atar; `load` sürerken çağrılan `next()` yüklenen sayfanın ardından devam eder.
 - `test/story-feed.test.js`: tampondaki sayfaya ve tampondaki görselsiz sayfaya istek atmadan geçiş; tamponda olmayan sayfaya atlama (`state.page`, `jumping`, kart durumu, sonuçta ilk story); görselsiz hedef sayfadan sonra arama ve hedefin boş sayfa sayacına girmemesi; atlamadan önce başlayan arka plan yüklemesinin sonucunun yok sayılması; art arda üç atlamada yalnızca ilk ve son sayfanın istenmesi; atlama hatası ve `retry()` ile aynı sayfanın yeniden istenmesi; `pagePosition` ve `pageStoryCount` değerleri; sınır dışı sayfanın sıkıştırılması.
-- `test/main.smoke.test.js`: sayaç `1/1`; `.es-avatar` `src` fixture'daki avatar; tek sayfalı başlıkta `.es-pager` gizli; çok sayfalı başlıkta gösterge görünür, açılışta sayfa istenmez ve `»` tıklanınca yalnızca `?p=2` istenir; ikinci sayfaya geçip Esc ile kapatınca `navigate` `…?focusto=<entry id>` ile çağrılır; açılış sayfasındaki entry'de kapatınca `navigate` çağrılmaz.
+- `test/main.smoke.test.js`: sayaç `1/1`; `.es-avatar` `src` fixture'daki avatar; tek sayfalı başlıkta `.es-pager` gizli; çok sayfalı başlıkta gösterge görünür, açılışta sayfa istenmez ve `»` tıklanınca yalnızca `?p=2` istenir; ikinci sayfaya geçip Esc ile kapatınca `navigate` `…?focusto=<entry id>` ile çağrılır; açılış sayfasındaki entry'de kapatınca `navigate` çağrılmaz; seçim kutusundan sayfa seçilince yalnızca o sayfa istenir, odak story ekranına döner, seçim kutusu odaktayken story durur ve oklar çalışmaz; sayfa sayısı değişmedikçe seçenekler yeniden kurulmaz.
 
 ## 10. Playground ve Store görselleri
 

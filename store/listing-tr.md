@@ -52,7 +52,7 @@ resmi değil, ekşi teknoloji ile bağı yok. açık kaynak: https://github.com/
 ekşi sözlük başlıklarındaki entry görsellerini tam ekran, story gibi göstermek.
 
 **izin gerekçesi (`https://eksisozluk.com/*`):**
-sadece eksisozluk.com başlık sayfalarına bir buton ekler. basılınca aynı sitedeki entry'leri, başlığın sonraki sayfalarını ve ekşi görsel sayfalarını (/img/…) okuyup görselleri gösterir. başka siteye eklenmez, başka izin istemez.
+sadece eksisozluk.com başlık sayfalarına bir buton ekler. basılınca aynı sitedeki entry'leri, başlığın diğer sayfalarını ve ekşi görsel sayfalarını (/img/…) okuyup görselleri gösterir. başka siteye eklenmez, başka izin istemez.
 
 **uzak kod:** hayır. bütün kod paketin içinde, dinamik import sadece paketteki dosyaları yükler.
 

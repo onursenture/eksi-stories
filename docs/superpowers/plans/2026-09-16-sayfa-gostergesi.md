@@ -1058,6 +1058,7 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 ### Task 4: Story ekranında avatar - isim, sayaç ve sayfa göstergesi
 
 > Uygulama notu (kullanıcı isteği, 17.09.2026): üst bardaki yazılar ortak taban çizgisine oturur, avatar `vertical-align: middle` ile yazının içinde ortalanır; son CSS `src/viewer/viewer.css`'tedir.
+> Uygulama notu (kullanıcı kararı, 17.09.2026): seçim kutusu odaktayken story durur; iki ek smoke test seçim kutusu yolunu ve seçeneklerin yeniden kurulmamasını korur.
 
 **Files:**
 - Modify: `test/main.smoke.test.js`
@@ -2088,7 +2089,7 @@ Run: `node --test test/main.smoke.test.js`
 Expected: `ℹ fail 0` (7 test)
 
 Run: `npm test`
-Expected: `ℹ fail 0` (toplam 76 test)
+Expected: `ℹ fail 0` (toplam 78 test)
 
 - [ ] **Step 5: Commit**
 
@@ -2400,6 +2401,8 @@ Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>"
 
 ### Task 7: Belgeler
 
+> Uygulama notu (son inceleme sonrası, 17.09.2026): gizlilik metninde ve Store izin gerekçesinde "sonraki sayfalarını" → "diğer sayfalarını", gizlilik tarihi 17.09.2026.
+
 **Files:**
 - Modify: `README.md`
 - Modify: `store/listing-tr.md`
@@ -2562,7 +2565,7 @@ Bu görevi alt ajana verme: kullanıcının Chrome'u ve onayı gerekir. Kullanı
 - [ ] **Step 1: Testler ve paket**
 
 Run: `npm test`
-Expected: `ℹ fail 0` (toplam 76 test)
+Expected: `ℹ fail 0` (toplam 80 test)
 
 Run: `npm run package`
 Expected: `dist/eksi-stories-0.1.0.zip` oluşur, komut hatasız biter.
