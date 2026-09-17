@@ -10,6 +10,8 @@
 
 **Spec:** [docs/superpowers/specs/2026-09-17-ortak-istek-sirasi-design.md](../specs/2026-09-17-ortak-istek-sirasi-design.md)
 
+> Uygulama notu (son inceleme sonrası): `pace` yorumuna "yalnızca `run` işinin içinde" eklendi; spec'in "tek fark" cümlesi ve 2026-09-16 spec'indeki not netleştirildi. Güncel kod `src/core/page-source.js`'te, güncel notlar spec'lerdedir.
+
 ## Global Constraints
 
 - İstek kuralları ve sabitler değişmez: aynı anda tek sayfa isteği; istek başlangıçları arasında en az `PAGE_MIN_GAP_MS` = 1500 ms; 429/5xx/ağ hatasında `PAGE_RETRY_DELAY_MS` = 5000 ms sonra bir tekrar. `src/core/constants.js`'e dokunulmaz.

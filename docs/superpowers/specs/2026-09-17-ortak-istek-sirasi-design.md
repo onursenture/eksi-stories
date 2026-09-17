@@ -92,7 +92,7 @@ export function createPageSource({ fetch, parseHtml, baseUrl, current, count, qu
 - Kod değişmez.
 - `dispose()` sonrasında `fetchNextPage` ve `runJump` işleyicileri `disposed` bayrağıyla erken döner: olay yayılmaz, `errorKind` değişmez.
 - Görüntüleyici kapanırken `change` dinleyicisini bırakır ve DOM'dan kalkar; kapanan ekranda hata kartı çıkmaz. Yeni oturumun `feed`'i ayrıdır, eski oturumun reddini almaz.
-- Oturum içinde `retry()`, `goToPage()`, art arda atlama ve hata kartları aynı kalır. Tek fark: yeni oturumun ilk sayfa isteği, önceki oturumun son isteğinden 1500 ms geçmediyse bekler.
+- Oturum içinde `retry()`, `goToPage()`, art arda atlama ve hata kartları aynı kalır. Tek fark: yeni oturumun ilk sayfa isteği, önceki oturumun uçuştaki isteği ya da 429/5xx sonrası 5000 ms beklemesi bitene ve önceki oturumun son isteğinden 1500 ms geçene kadar bekler (bkz. §5).
 - Konsolda "unhandled rejection" oluşmaz: sıranın zinciri reddi yutar, story akışı her `next()` ve `load()` sözüne hata işleyicisi bağlar.
 
 ## 8. Kapsam dışı

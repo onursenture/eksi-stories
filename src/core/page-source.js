@@ -39,7 +39,7 @@ export function createPageQueue({ minGapMs = PAGE_MIN_GAP_MS, now = () => Date.n
     return result;
   }
 
-  /** Her istekten hemen önce çağrılır: önceki istek başlayalı `minGapMs` geçmediyse bekler. Beklerken iptal edildiyse istek sayılmaz. */
+  /** Yalnızca `run` işinin içinde, her istekten hemen önce çağrılır: önceki istek başlayalı `minGapMs` geçmediyse bekler. Beklerken iptal edildiyse istek sayılmaz. */
   async function pace(signal) {
     const wait = lastRequestAt + minGapMs - now();
     if (wait > 0) await sleep(wait);
