@@ -324,6 +324,55 @@ test('kapatıldıktan sonra next ve load istek atmadan reddedilir', async () => 
   assert.equal(calls, 1);
 });
 
+test('önden okuma hakları bitince sonraki sayfa bir hak dolana kadar bekler', async () => {
+  const starts = [];
+  const { source, clock } = makeSource(async (url) => {
+    starts.push(clock.t);
+    return ok(pageBody(Number(new URL(url).searchParams.get('p')), 20));
+  }, { count: 20 });
+  const round = [1500, 1500, 1500, 1500, 1500, 1500, 1000, 1500, 3500];
+
+  for (let i = 0; i < 8; i += 1) await source.next();
+  assert.deepEqual(starts, [0, 1500, 3000, 4500, 6000, 7500, 10000, 15000]);
+  assert.deepEqual(clock.sleeps, round);
+
+  clock.t += 60000; // bir dakika istek yok: haklar en fazla 5'e dolar
+  for (let i = 0; i < 8; i += 1) await source.next();
+  assert.deepEqual(starts.slice(8), [75000, 76500, 78000, 79500, 81000, 82500, 85000, 90000]);
+  assert.deepEqual(clock.sleeps, [...round, ...round]);
+});
+
+test('sayfa atlama hak harcamaz', async () => {
+  const { source, clock } = makeSource(async (url) => ok(pageBody(Number(new URL(url).searchParams.get('p')), 12)), { count: 12 });
+  for (let i = 0; i < 6; i += 1) await source.next();
+  assert.deepEqual(clock.sleeps, [1500, 1500, 1500, 1500, 1500]);
+  await source.load(9);
+  await source.next();
+  assert.deepEqual(clock.sleeps, [1500, 1500, 1500, 1500, 1500, 1500, 1500], 'load hak harcasaydı sonraki istekten önce hak beklenirdi');
+});
+
+test('hak beklerken kapatılınca istek atılmaz ve hak harcanmaz', async () => {
+  const { clock, open } = makeTab();
+  const requests = [];
+  const fetch = async (url) => {
+    requests.push(url);
+    return ok(pageBody(Number(new URL(url).searchParams.get('p')), 12));
+  };
+  const closed = open(fetch, { count: 12 });
+  for (let i = 0; i < 6; i += 1) await closed.next();
+  clock.onSleep = () => {
+    if (clock.sleeps.at(-1) === 1000) closed.dispose(); // hak beklenirken kapanır
+  };
+  await assert.rejects(closed.next(), { name: 'AbortError' });
+  clock.onSleep = null;
+  assert.equal(requests.length, 6, 'hak beklenirken kapanan oturum istek atmaz');
+  assert.deepEqual(clock.sleeps, [1500, 1500, 1500, 1500, 1500, 1500, 1000]);
+
+  assert.equal((await open(fetch, { count: 12 }).next()).page, 2);
+  assert.equal(requests.length, 7);
+  assert.deepEqual(clock.sleeps, [1500, 1500, 1500, 1500, 1500, 1500, 1000], 'hak harcanmadığı için yeni oturum beklemez');
+});
+
 test("sistem saati geri alınsa da aralık beklemesi 1500 ms'yi geçmez", async (t) => {
   const sleeps = [];
   const queue = createPageQueue({
