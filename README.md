@@ -40,7 +40,7 @@ kod değişince `chrome://extensions` sayfasında eklentiyi yenile, sonra ekşi 
 
 - sadece kişisel kullanım için. reklam, ücret, ticari amaç yok.
 - senin tarayıcında, senin oturumunla çalışır. sadece zaten görebildiğin sayfaları okur.
-- siteyi yormaz: her sekmede sayfa istekleri arasında en az 1,5 saniye bekler, aynı anda tek sayfa ister, görsel sayfalarını en fazla ikişer açar, 5 görselsiz sayfadan sonra durur.
+- siteyi yormaz: her sekmede sayfa istekleri arasında en az 1,5 saniye bekler, aynı anda tek sayfa ister, görsel sayfalarını en fazla ikişer açar, 5 sayfa boyunca görsel açılmazsa durur.
 - sitenin yazılarına, reklamlarına, düzenine dokunmaz. sadece bir buton ve kapatınca kaybolan bir ekran ekler.
 - her görselde yazara ve entry'ye link verir.
 
@@ -60,7 +60,7 @@ npm run icons      # ikonları yeniden üret
 npm run package    # dist/eksi-stories-<sürüm>.zip
 ```
 
-playground ekşi'ye hiç istek atmadan sahte görsellerle açılır: `?scenario=0` … `?scenario=4`.
+playground ekşi'ye hiç istek atmadan sahte görsellerle açılır: `?scenario=0` … `?scenario=5`.
 
 | klasör | içinde |
 |---|---|

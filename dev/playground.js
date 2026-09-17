@@ -97,6 +97,10 @@ const SCENARIOS = [
     pages: [[makeEntry([svgImage(SHAPES[3], 240)], 'tekrar deneyince geldi')]],
     failOnce: [2],
   })],
+  ['açılmayan görseller → aramaya devam', () => ({
+    entries: [makeEntry([svgImage(SHAPES[1], 150)], 'sonrasında görselleri açılmayan 5 sayfa var')],
+    pages: [...Array.from({ length: 5 }, () => [makeEntry([BROKEN_IMAGE])]), [makeEntry([svgImage(SHAPES[3], 270)], 'aramaya devam edince bulundu')]],
+  })],
 ];
 
 const cssText = await fetch(new URL('../src/viewer/viewer.css', import.meta.url)).then((response) => response.text());

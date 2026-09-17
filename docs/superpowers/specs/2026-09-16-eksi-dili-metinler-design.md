@@ -2,6 +2,7 @@
 
 Tarih: 2026-09-16
 Durum: Bölümler kullanıcıyla onaylandı, spec incelemesi bekliyor
+Not: §4'teki boş sayfa sınırı kartı 2026-09-17-acilmayan-gorsel-siniri-design.md ile `${EMPTY_PAGE_LIMIT} sayfadır açılan görsel yok` oldu.
 
 ## 1. Kararlar
 
