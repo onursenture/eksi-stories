@@ -14,6 +14,8 @@
 
 **Spec:** [docs/superpowers/specs/2026-09-17-acilmayan-gorsel-siniri-design.md](../specs/2026-09-17-acilmayan-gorsel-siniri-design.md)
 
+> Uygulama notu (son inceleme sonrası): kullanıcı kararıyla `test/story-feed.test.js`'e `tampondaki sayfaya geçiş sayfa sınırını sıfırlamaz` testi eklendi (test sayısı 96). Spec'in §3, §8, §9 ve §10'u son incelemenin ölçümleriyle düzeltildi; önde açık ekrandaki kalan risk ayrı bir tasarıma bırakıldı.
+
 ## Global Constraints
 
 - İstek kuralları ve sabitler değişmez. `src/core/constants.js`'e dokunulmaz.

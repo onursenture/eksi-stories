@@ -1,7 +1,7 @@
 # açılmayan görsellerde sayfa sınırı: tasarım
 
 Tarih: 2026-09-17
-Durum: Onaylandı (brainstorming sonucu).
+Durum: Onaylandı (brainstorming sonucu). Son incelemeden sonra §3, §8, §9 ve §10 düzeltildi: önde açık ekrandaki kalan risk ölçülen sayılarla yazıldı, hızlı geçişte kart çıkabileceği eklendi, tampondaki sayfaya geçiş için bir test eklendi.
 
 ## 1. Sorun
 
@@ -61,7 +61,9 @@ Her senaryoda sayfa istekleri arasında en az 1500 ms vardı.
 - **"Açıldı" tanımı:** aktif story'nin görüntüleyicideki `<img>` için `load` olayı gelmiş olmalı. Adresin çözülmüş olması yetmez, çünkü direkt linkler çözülmeden `ready` olur.
 - **Sayılmayan sayfalar** bugünkü gibi: açılış sayfası, tamponda olmayıp atlanan sayfa ve "aramaya devam"a basıldığı anda son yüklenen sayfa.
 - **Sınır kalıcı değil.** Sınır doluyken tampondaki bir görsel açılırsa önden okuma kendiliğinden sürer. Böylece kullanıcı tampondaki bir görseli daha görmeden kart çıkmaz.
-- **Görseller açılıyorsa davranış aynı kalır.** Tek fark çok seyrek başlıklarda: 5 sayfada 2 ya da daha az görsel varsa önden okuma, sıradaki görsel açılana kadar bekleyebilir.
+- **Görseller açılıyorsa davranış neredeyse aynı kalır.** İki fark var:
+  - Çok seyrek başlıklarda (5 sayfada 2 ya da daha az görsel) önden okuma, sıradaki görsel açılana kadar bekleyebilir.
+  - Görseller açılmadan hızla geçilirse, açılan görsel olmadan 5 sayfa yüklenebilir ve kart çıkar. Son incelemedeki simülasyonda sayfada 10 görsel ve 300 ms açılma süresiyle 150 ms'de bir geçişte kart 9. saniyede çıktı; 400 ms'de bir geçişte çıkmadı. `aramaya devam` ya da ← ile sürer.
 - **Kart metni:** `5 sayfadır açılan görsel yok`, buton `aramaya devam` (kullanıcı kararı, 17.09.2026). Metin iki durumu da doğru anlatır: sayfalarda hiç görsel olmaması ve görsellerin açılmaması.
 - **Değişmeyenler:**
   - sayfa isteği sırası ve 1500 ms aralık;
@@ -184,6 +186,8 @@ Beş yeni test eklenir. Hepsi bugünkü kodda başarısız olur.
 
 Mevcut "art arda 5 görselsiz sayfada durur, continueSearching devam ettirir" ve "görselsiz hedef sayfadan sonra arama sürer ve hedef boş sayfa sayılmaz" testleri değişmeden geçer.
 
+Son incelemeden sonra kullanıcı kararıyla (17.09.2026) bir story akışı testi daha eklendi: `tampondaki sayfaya geçiş sayfa sınırını sıfırlamaz`. 1. testteki gibi sınır 6. sayfada dolar, sonra tampondaki 3. sayfaya geçilir (`goToPage(3)`). Yeni sayfa istenmez ve `blocked` true kalır; tampon içi geçiş sayımı hedef sayfadan yeniden başlatsaydı 7. ve 8. sayfalar istenirdi.
+
 ### `test/main.smoke.test.js`
 
 İki yeni test eklenir. İkisi de `main`'e sahte saatli `pageQueue` verir (`now` ve `sleep` testteki saati kullanır) ve bugünkü kodda başarısız olur.
@@ -202,21 +206,27 @@ Mevcut "art arda 5 görselsiz sayfada durur, continueSearching devam ettirir" ve
    - `.es-image` üzerinde `load` olayı tetiklenince `?p=7` istenir.
    - Görüntüleyicideki `markOpened` çağrısını sabitler. jsdom görsel yüklemediği için olay elle tetiklenir.
 
-Test sayısı 88'den 95'e çıkar.
+Test sayısı 88'den 96'ya çıkar.
 
 ## 9. Kapsam dışı
 
 - **Sunucu hata verince `/img/` isteklerini yavaşlatmak ve 429/5xx görsel hatasını kalıcı olarak önbelleğe almamak.** Bu çözümleyicinin işi; v0.2'ye park edilen maddeyle birlikte ele alınır.
   - Bu tasarımdan sonra kalan en kötü durum: sınır dolana kadar açılış sayfasının ve 5 sayfanın `/img/` istekleri.
   - Sayfada 100 entry'de bu ~600 istek eder: 404'te ~45 sn, 429'da ~15 sn sürer. Sayfada 10 entry'de ~60 istek.
-- **Önde açık ekranda arada bir görseli açılan ama çoğu açılmayan başlık.** Her 5 sayfada en az bir görsel açılıyorsa kendiliğinden oynatma sürer. Bu, görseller açılırken zaten sınırsız olan oynatmanın parçasıdır; açılan her görsel 5 sn gösterilir.
+- **Önde açık ve durdurulmamış ekranda arada bir görseli açılan ama çoğu açılmayan başlık.** Son açılan görselin sayfasından sonraki 5 sayfa içinde yeni bir görsel açıldıkça zincir sürer; bu sınır onu durdurmaz. Açılan her görsel 5 sn gösterilir, ama açılmayanlar hızla atlandığı için hız eski hataya yakındır. Son incelemedeki simülasyon (10 dk, sayfada 100 entry):
+  - her 5 sayfada bir görsel açılıyor, diğerlerinde `/img/` 404 dönüyor: ~417 sayfa/saat, ~41.700 `/img/`/saat;
+  - her 5 sayfada bir görsel açılıyor, diğerleri ölü direkt link: ~324 sayfa/saat, `/img/` isteği yok;
+  - her 6 sayfada bir görsel açılıyorsa zincir 89 sn'de durur; gizli ya da durdurulmuş ekranda ilk açılan görselde durur;
+  - karşılaştırma: bütün görseller açılırken normal oynatma, sayfada 100 entry ile saatte ~7 sayfa ve ~720 `/img/` ister.
+
+  Kullanıcı kararı (17.09.2026): bu dal böyle birleşir; kalan risk Store yayınından önce ayrı bir tasarımla ele alınır (art arda açılmayan görsel sınırı ya da `/img/` hatasında yavaşlama).
 - Gizli ya da durdurulmuş ekranda açılmayan görseli bekletmek ve art arda açılmayan görsel sınırı (bkz. §3).
 - Sekmeler arası sıra, `focusto` gezintisinin zamanlaması ve kapatınca uçuştaki isteği kesmek (`2026-09-17-istek-sirasi-sinirlari-design.md` §3 ve §7).
 
 ## 10. Doğrulama
 
 1. Yeni testler değişiklikten önce başarısız olur.
-2. Değişiklikten sonra `npm test` ile 95 test geçer.
+2. Değişiklikten sonra `npm test` ile 96 test geçer.
 3. Simülasyon betiği (planda) yeniden çalıştırılır. Beş senaryonun hepsinde şunlar görülür:
    - açılıştan sonra en fazla 5 sayfa isteği;
    - en fazla 6 × (sayfa başına görsel) `/img/` isteği;
