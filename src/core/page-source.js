@@ -21,8 +21,38 @@ export function buildPageUrl(baseUrl, page) {
 const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
 /**
- * Başlığın sayfalarını siteye yük bindirmeden, sırayla çeker.
- * @returns {{ hasNext: () => boolean, next: () => Promise<{ page: number, count: number, entries: object[] }>, load: (page: number) => Promise<{ page: number, count: number, entries: object[] }> }}
+ * Sekmedeki bütün sayfa isteklerinin ortak sırası: aynı anda tek iş, istek başlangıçları arasında en az `minGapMs`.
+ * Story ekranı kapatılıp açılınca da kurallar sürsün diye sekme başına bir kez kurulur.
+ * @returns {{ run: (job: () => Promise<any>, signal: AbortSignal) => Promise<any>, pace: (signal: AbortSignal) => Promise<void> }}
+ */
+export function createPageQueue({ minGapMs = PAGE_MIN_GAP_MS, now = () => Date.now(), sleep = defaultSleep } = {}) {
+  let tail = Promise.resolve();
+  let lastRequestAt = Number.NEGATIVE_INFINITY;
+
+  /** İşi sıraya sokar: önceki iş bitmeden başlamaz. Sırası geldiğinde iptal edilmişse hiç başlamaz. */
+  function run(job, signal) {
+    const result = tail.then(() => {
+      signal.throwIfAborted();
+      return job();
+    });
+    tail = result.catch(() => {});
+    return result;
+  }
+
+  /** Her istekten hemen önce çağrılır: önceki istek başlayalı `minGapMs` geçmediyse bekler. Beklerken iptal edildiyse istek sayılmaz. */
+  async function pace(signal) {
+    const wait = lastRequestAt + minGapMs - now();
+    if (wait > 0) await sleep(wait);
+    signal.throwIfAborted();
+    lastRequestAt = now();
+  }
+
+  return { run, pace };
+}
+
+/**
+ * Bir story oturumunda başlığın sayfalarını sekmenin ortak sırasıyla, siteye yük bindirmeden çeker.
+ * @returns {{ hasNext: () => boolean, next: () => Promise<{ page: number, count: number, entries: object[] }>, load: (page: number) => Promise<{ page: number, count: number, entries: object[] }>, dispose: () => void }}
  */
 export function createPageSource({
   fetch,
@@ -30,22 +60,19 @@ export function createPageSource({
   baseUrl,
   current,
   count,
-  minGapMs = PAGE_MIN_GAP_MS,
+  queue,
   retryDelayMs = PAGE_RETRY_DELAY_MS,
-  now = () => Date.now(),
   sleep = defaultSleep,
 }) {
+  const controller = new AbortController();
+  const { signal } = controller;
   let lastPage = current;
   let pageCount = count;
-  let lastRequestAt = Number.NEGATIVE_INFINITY;
-  let queue = Promise.resolve();
   let nextInFlight = null;
   let lastResult = null;
 
   async function request(url) {
-    const wait = lastRequestAt + minGapMs - now();
-    if (wait > 0) await sleep(wait);
-    lastRequestAt = now();
+    await queue.pace(signal);
     try {
       const response = await fetch(url, { credentials: 'include' });
       if (response.ok) return { html: await response.text() };
@@ -67,13 +94,15 @@ export function createPageSource({
       await sleep(retryDelayMs);
       result = await request(url);
     }
+    // Story ekranı bu arada kapandıysa yanıt kullanılmaz.
+    signal.throwIfAborted();
     if (result.error) throw result.error;
     return parseTopicPage(parseHtml(result.html));
   }
 
-  /** Sayfa isteklerini sıraya sokar: biri bitmeden sonraki başlamaz. Aynı sayfaya art arda istek varsa son sonucu döndürür. */
+  /** Sayfa isteklerini sekmenin ortak sırasına sokar. Aynı sayfaya art arda istek varsa son sonucu döndürür. */
   function enqueue(pickPageFn) {
-    const result = queue.then(async () => {
+    return queue.run(async () => {
       const page = pickPageFn();
       if (lastResult && lastResult.page === page) return lastResult;
       const parsed = await fetchPage(page);
@@ -86,9 +115,7 @@ export function createPageSource({
       pageCount = Math.max(parsed.page.count, page);
       lastResult = { page, count: pageCount, entries: parsed.entries };
       return lastResult;
-    });
-    queue = result.catch(() => {});
-    return result;
+    }, signal);
   }
 
   const hasNext = () => lastPage < pageCount;
@@ -109,5 +136,10 @@ export function createPageSource({
     return enqueue(() => page);
   }
 
-  return { hasNext, next, load };
+  /** Story ekranı kapanınca çağrılır: bekleyen işler istek atmadan düşer, uçuştaki isteğin yanıtı kullanılmaz. */
+  function dispose() {
+    controller.abort();
+  }
+
+  return { hasNext, next, load, dispose };
 }

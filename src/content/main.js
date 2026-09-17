@@ -1,6 +1,6 @@
 import { isTopicPage, parseTopicPage } from '../core/entry-parser.js';
 import { createResolver } from '../core/image-resolver.js';
-import { createPageSource } from '../core/page-source.js';
+import { createPageQueue, createPageSource } from '../core/page-source.js';
 import { createStoryFeed } from '../core/story-feed.js';
 import { openViewer } from '../viewer/viewer.js';
 
@@ -75,6 +75,7 @@ function startStories({ doc, fetchImpl, cssText, resolver, onClose }) {
     baseUrl: doc.location.href,
     current: page.current,
     count: page.count,
+    queue: createPageQueue(),
   });
   const feed = createStoryFeed({ entries, page: page.current, pageCount: page.count, pageSource, resolver });
   openViewer({

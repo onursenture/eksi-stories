@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PageStructureError } from '../src/core/entry-parser.js';
-import { buildPageUrl, createPageSource, PageFetchError } from '../src/core/page-source.js';
+import { buildPageUrl, createPageQueue, createPageSource, PageFetchError } from '../src/core/page-source.js';
 import { parseHtml } from './helpers/dom.js';
 import { link, topicPageHtml } from './helpers/eksi-html.js';
 import { deferred, flush } from './helpers/async.js';
@@ -15,22 +15,31 @@ const pageBody = (current, count) => topicPageHtml({
   entries: [{ id: `${current}01`, content: link(`https://soz.lk/i/img${current}01`) }],
 });
 
-function makeSource(fetch, overrides = {}) {
-  const clock = { t: 0, sleeps: [] };
-  const source = createPageSource({
+/** Tek sekme: sahte saat, ortak sayfa isteği sırası ve bu sıradan oturum açan `open`. `clock.onSleep` bekleme sürerken çalışır. */
+function makeTab() {
+  const clock = { t: 0, sleeps: [], onSleep: null };
+  const sleep = async (ms) => {
+    clock.sleeps.push(ms);
+    clock.onSleep?.();
+    clock.t += ms;
+  };
+  const queue = createPageQueue({ now: () => clock.t, sleep });
+  const open = (fetch, overrides = {}) => createPageSource({
     fetch,
     parseHtml,
     baseUrl: TOPIC_URL,
     current: 1,
     count: 5,
-    now: () => clock.t,
-    sleep: async (ms) => {
-      clock.sleeps.push(ms);
-      clock.t += ms;
-    },
+    queue,
+    sleep,
     ...overrides,
   });
-  return { source, clock };
+  return { clock, open };
+}
+
+function makeSource(fetch, overrides = {}) {
+  const { clock, open } = makeTab();
+  return { source: open(fetch, overrides), clock };
 }
 
 test('buildPageUrl filtreleri korur, focusto ve hash siler', () => {
@@ -227,4 +236,90 @@ test('load 5xx hatasında 5 sn sonra bir kez tekrar dener', async () => {
   const { source, clock } = makeSource(async () => responses.shift());
   assert.equal((await source.load(4)).page, 4);
   assert.deepEqual(clock.sleeps, [5000]);
+});
+
+test('aynı sıradaki iki oturumun istekleri üst üste binmez, aralarında 1500 ms beklenir', async () => {
+  const { clock, open } = makeTab();
+  const requests = [];
+  const firstResponse = deferred();
+  const fetch = async (url) => {
+    requests.push(url);
+    if (requests.length === 1) await firstResponse.promise;
+    return ok(pageBody(2, 5));
+  };
+  const both = Promise.all([open(fetch).next(), open(fetch).next()]);
+  await flush();
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=2`], 'ilk yanıt gelmeden ikinci oturum istek atmaz');
+  firstResponse.resolve();
+  await both;
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=2`, `${TOPIC_URL}?p=2`]);
+  assert.deepEqual(clock.sleeps, [1500]);
+});
+
+test('kapatılan oturumun uçuştaki isteği beklenir, sıradaki işi istek atmadan düşer', async () => {
+  const { clock, open } = makeTab();
+  const requests = [];
+  const firstResponse = deferred();
+  const fetch = async (url) => {
+    requests.push(url);
+    if (requests.length === 1) await firstResponse.promise;
+    return ok(pageBody(Number(new URL(url).searchParams.get('p')), 9));
+  };
+  const closed = open(fetch, { count: 9 });
+  const inFlight = assert.rejects(closed.next(), { name: 'AbortError' });
+  const queued = assert.rejects(closed.load(7), { name: 'AbortError' });
+  await flush();
+  closed.dispose();
+  const reopened = open(fetch, { count: 9 }).next();
+  await flush();
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=2`], 'uçuştaki yanıt gelmeden yeni istek başlamaz');
+  firstResponse.resolve();
+  await inFlight;
+  await queued;
+  assert.equal((await reopened).page, 2);
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=2`, `${TOPIC_URL}?p=2`]);
+  assert.deepEqual(clock.sleeps, [1500]);
+});
+
+test('aralık beklenirken kapatılırsa istek atılmaz, sonraki oturum fazladan beklemez', async () => {
+  const { clock, open } = makeTab();
+  const requests = [];
+  const fetch = async (url) => {
+    requests.push(url);
+    return ok(pageBody(Number(new URL(url).searchParams.get('p')), 9));
+  };
+  const closed = open(fetch, { count: 9 });
+  await closed.next();
+  clock.onSleep = () => closed.dispose(); // 1500 ms aralık beklenirken kapanır
+  await assert.rejects(closed.next(), { name: 'AbortError' });
+  clock.onSleep = null;
+  assert.equal((await open(fetch, { count: 9 }).next()).page, 2);
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=2`, `${TOPIC_URL}?p=2`]);
+  assert.deepEqual(clock.sleeps, [1500]);
+});
+
+test('uçuştaki istek 503 dönerken kapatılırsa 5 sn beklenir, tekrar isteği atılmaz', async () => {
+  let calls = 0;
+  const { source, clock } = makeSource(async () => {
+    calls += 1;
+    source.dispose(); // yanıt gelmeden story ekranı kapanır
+    return failWith(503);
+  });
+  await assert.rejects(source.next(), { name: 'AbortError' });
+  assert.equal(calls, 1);
+  assert.deepEqual(clock.sleeps, [5000]);
+});
+
+test('kapatıldıktan sonra next ve load istek atmadan reddedilir', async () => {
+  let calls = 0;
+  const { source } = makeSource(async () => {
+    calls += 1;
+    return ok(pageBody(2, 5));
+  });
+  await source.load(2);
+  source.dispose();
+  source.dispose();
+  await assert.rejects(source.load(2), { name: 'AbortError' }, 'son sonuç da kullanılmaz');
+  await assert.rejects(source.next(), { name: 'AbortError' });
+  assert.equal(calls, 1);
 });
