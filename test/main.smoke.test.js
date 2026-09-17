@@ -312,7 +312,24 @@ test('kapatıp hemen yeniden açınca kapanan oturumun sayfası istenmez, sayfa 
 
 test('açılmayan görsel ekranda kalır, süresi dolunca sonraki story gelir', async () => {
   const { dom, doc, requests, fetchImpl } = brokenImagesSetup({
-    1: [{ id: '101', author: 'sayfa 1 yazarı', content: link('https://soz.lk/i/acilan101') }, ...pageEntries(1).slice(1)],
+    1: [
+      { id: '101', author: 'sayfa 1 yazarı', content: link('https://soz.lk/i/acilan101') },
+      ...pageEntries(1).slice(1, 3),
+      { id: '104', author: 'sayfa 1 yazarı', content: link('https://soz.lk/i/acilan104') },
+    ],
+  });
+  const assignedSources = [];
+  const srcDescriptor = Object.getOwnPropertyDescriptor(dom.window.HTMLImageElement.prototype, 'src');
+  // Önden yükleme görseli DOM'da değil: atanan adresler görsel öğelerinin src'sinden izlenir.
+  Object.defineProperty(dom.window.HTMLImageElement.prototype, 'src', {
+    configurable: true,
+    get() {
+      return srcDescriptor.get.call(this);
+    },
+    set(value) {
+      assignedSources.push(value);
+      srcDescriptor.set.call(this, value);
+    },
   });
   const { pageQueue } = fakeClockQueue();
   await main({ cssUrl: CSS_URL, doc, fetchImpl, pageQueue });
@@ -359,8 +376,11 @@ test('açılmayan görsel ekranda kalır, süresi dolunca sonraki story gelir', 
   await settle();
   assert.equal(counter(), '3/4');
   assert.equal(failed.hidden, false);
+  assert.ok(assignedSources.includes('https://cdn.eksisozluk.com/acilan104.jpg'), 'açılmayan story ekrandayken sıradaki görsel önden yüklenir');
 
   dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowLeft' }));
+  assert.equal(counter(), '2/4');
+  assert.ok(activeFill(), 'geri dönülen açılmayan story\'de çizgi yeniden dolar');
   dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'ArrowLeft' }));
   assert.equal(counter(), '1/4');
   assert.equal(failed.hidden, true, 'açılan görsele dönünce yazı kalkar');
@@ -387,4 +407,52 @@ test('görsel açılınca önden okuma o görselin sayfasından sürer', async (
   image.dispatchEvent(new dom.window.Event('load')); // jsdom görsel yüklemez, açılma elle tetiklenir
   for (let i = 0; i < 10; i += 1) await flush();
   assert.deepEqual(pageRequests(), pageUrls(2, 11), 'sayım açılan görselin sayfasından yeniden başlar');
+});
+
+test('sekme gizlenince ekran durur, görününce sürer', async () => {
+  const { dom, doc, fetchImpl } = setup(pageEntries(1));
+  await main({ cssUrl: CSS_URL, doc, fetchImpl });
+  doc.querySelector('.eksi-stories-button').click();
+  for (let i = 0; i < 4; i += 1) await flush();
+
+  const shadow = doc.querySelector('eksi-stories-viewer').shadowRoot;
+  const root = shadow.querySelector('.es-root');
+  let hidden = false;
+  Object.defineProperty(doc, 'hidden', { configurable: true, get: () => hidden });
+  hidden = true;
+  doc.dispatchEvent(new dom.window.Event('visibilitychange'));
+  assert.equal(root.classList.contains('is-paused'), true, 'gizli sekmede ekran durur');
+  assert.equal(shadow.querySelector('.es-paused').hidden, false);
+
+  hidden = false;
+  doc.dispatchEvent(new dom.window.Event('visibilitychange'));
+  assert.equal(root.classList.contains('is-paused'), false, 'sekme görününce ekran sürer');
+});
+
+test('görselsiz sayfalardan sonra kart çıkar, aramaya devam sonraki sayfaları hakla okur', async () => {
+  const noImagePages = Object.fromEntries(Array.from({ length: 29 }, (_, i) => [i + 2, [{ id: `${i + 2}01`, content: 'görselsiz' }]]));
+  const { dom, doc, requests, fetchImpl } = setup([{ id: '101', content: link('https://soz.lk/i/acilan101') }], { count: 30, pages: noImagePages });
+  const { clock, pageQueue } = fakeClockQueue();
+  await main({ cssUrl: CSS_URL, doc, fetchImpl, pageQueue });
+  doc.querySelector('.eksi-stories-button').click();
+  for (let i = 0; i < 10; i += 1) await flush();
+
+  const shadow = doc.querySelector('eksi-stories-viewer').shadowRoot;
+  const pageRequests = () => requests.filter((url) => url.startsWith(`${PAGE_URL}?`));
+  shadow.querySelector('.es-image').dispatchEvent(new dom.window.Event('load')); // jsdom görsel yüklemez, açılma elle tetiklenir
+  const ended = new dom.window.Event('animationend', { bubbles: true });
+  Object.defineProperty(ended, 'animationName', { value: 'es-fill' });
+  shadow.querySelector('.es-seg.is-active .es-seg-fill').dispatchEvent(ended);
+  for (let i = 0; i < 10; i += 1) await flush();
+  assert.equal(shadow.querySelector('.es-card-text').textContent, '5 sayfadır açılan görsel yok');
+  assert.deepEqual(pageRequests(), pageUrls(2, 6));
+  assert.deepEqual(clock.sleeps, [1500, 1500, 1500, 1500]);
+
+  const continueButton = [...shadow.querySelectorAll('.es-card-actions button')].find((button) => button.textContent === 'aramaya devam');
+  assert.ok(continueButton, 'aramaya devam butonu var');
+  continueButton.click();
+  for (let i = 0; i < 10; i += 1) await flush();
+  assert.deepEqual(pageRequests(), pageUrls(2, 11));
+  assert.equal(shadow.querySelector('.es-card-text').textContent, '5 sayfadır açılan görsel yok');
+  assert.deepEqual(clock.sleeps, [1500, 1500, 1500, 1500, 1500, 1500, 1000, 1500, 3500, 1500, 3500, 1500, 3500], 'haklar bitince sayfalar 5 sn arayla okunur');
 });

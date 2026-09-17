@@ -258,7 +258,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     if (story.status === 'ready' && loadingUrl !== story.resolvedUrl) loadImage(story, key);
     spinner.hidden = imageLoaded || failedShown;
     counter.textContent = `${state.pagePosition}/${state.pageStoryCount}`;
-    if (imageLoaded) preloadNext();
+    if (imageLoaded || failedShown) preloadNext();
   }
 
   // --- girdiler ---

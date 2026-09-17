@@ -18,7 +18,14 @@ export function buildPageUrl(baseUrl, page) {
   return url.href;
 }
 
-const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+/** `signal` iptal edilirse bekleme hemen biter; iptali çağıran denetler. */
+const defaultSleep = (ms, signal) => new Promise((resolve) => {
+  const timer = setTimeout(resolve, ms);
+  signal?.addEventListener('abort', () => {
+    clearTimeout(timer);
+    resolve();
+  }, { once: true });
+});
 
 /**
  * Sekmedeki bütün sayfa isteklerinin ortak sırası: aynı anda tek iş, istek başlangıçları arasında en az `minGapMs`.
@@ -26,7 +33,7 @@ const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * Varsayılan saat monotondur: sistem saati geri alınsa da bekleme `minGapMs`'yi geçmez.
  * Önden okuma istekleri (`fetchAhead`) ayrıca hak harcar: `fetchAheadBurst` hak vardır, her `fetchAheadRefillMs`'de bir hak dolar, hak yoksa dolana kadar beklenir.
  * Varsayılanlar sayfa sınırı ve story süresidir: tek bir görselsiz bölüm hızlı taranır, uzun zincir story süresinden hızlı sayfa istemez.
- * @returns {{ run: (job: () => Promise<any>, signal: AbortSignal) => Promise<any>, pace: (signal: AbortSignal, options?: { fetchAhead?: boolean }) => Promise<void> }}
+ * @returns {{ run: (job: () => Promise<any>, signal: AbortSignal) => Promise<any>, pace: (signal: AbortSignal, options?: { fetchAhead?: boolean, cancel?: AbortSignal }) => Promise<void> }}
  */
 export function createPageQueue({
   minGapMs = PAGE_MIN_GAP_MS,
@@ -61,15 +68,17 @@ export function createPageQueue({
   /**
    * Yalnızca `run` işinin içinde, her istekten hemen önce çağrılır: önceki istek başlayalı `minGapMs` geçmediyse bekler.
    * Önden okuma isteğinde hak yoksa bir hak dolana kadar da bekler. Beklerken iptal edildiyse istek sayılmaz, hak harcanmaz.
+   * `cancel` önden okumayı düşürür ve hak beklemesini keser; kapatma (`signal`) hiçbir beklemeyi kesmez.
    */
-  async function pace(signal, { fetchAhead = false } = {}) {
+  async function pace(signal, { fetchAhead = false, cancel = null } = {}) {
     const wait = lastRequestAt + minGapMs - now();
     if (wait > 0) await sleep(wait);
     if (fetchAhead) {
       refillBudget();
-      if (budget < fetchAheadRefillMs) await sleep(fetchAheadRefillMs - budget);
+      if (budget < fetchAheadRefillMs && !cancel?.aborted) await sleep(fetchAheadRefillMs - budget, cancel);
     }
     signal.throwIfAborted();
+    cancel?.throwIfAborted();
     if (fetchAhead) {
       refillBudget();
       budget -= fetchAheadRefillMs;
@@ -99,6 +108,8 @@ export function createPageSource({
   let lastPage = current;
   let pageCount = count;
   let nextInFlight = null;
+  // İsteği henüz gitmemiş önden okumanın iptali: sayfa atlanınca çağrılır.
+  let fetchAheadCancel = null;
   let lastResult = null;
 
   async function request(url, options) {
@@ -150,20 +161,23 @@ export function createPageSource({
 
   const hasNext = () => lastPage < pageCount;
 
-  /** Önden okuma: sonraki sayfa isteği sıradan hak da harcar. */
+  /** Önden okuma: sonraki sayfa isteği sıradan hak da harcar. Sayfa atlanırsa isteği henüz gitmemiş okuma düşer. */
   function next() {
     if (nextInFlight) return nextInFlight;
+    const cancel = new AbortController();
+    fetchAheadCancel = cancel;
     nextInFlight = enqueue(() => {
       if (!hasNext()) throw new Error('sonraki sayfa yok');
       return lastPage + 1;
-    }, { fetchAhead: true }).finally(() => {
+    }, { fetchAhead: true, cancel: cancel.signal }).finally(() => {
       nextInFlight = null;
     });
     return nextInFlight;
   }
 
-  /** İstenen sayfayı yükler; art arda aynı sayfa istenirse bir istek atar. */
+  /** İstenen sayfayı yükler; art arda aynı sayfa istenirse bir istek atar. İsteği henüz gitmemiş önden okumayı düşürür. */
   function load(page) {
+    fetchAheadCancel?.abort();
     return enqueue(() => page);
   }
 

@@ -183,7 +183,9 @@ test('load ve next aynı anda tek istek atar, aralarında 1500 ms beklenir', asy
     if (page === 2) await firstResponse.promise;
     return ok(pageBody(page, 9));
   }, { count: 9 });
-  const both = Promise.all([source.next(), source.load(7)]);
+  const fromNext = source.next();
+  await flush(); // next'in isteği uçuşta: sayfa atlama onu düşürmez
+  const both = Promise.all([fromNext, source.load(7)]);
   await flush();
   assert.deepEqual(requests, [`${TOPIC_URL}?p=2`], 'ilk yanıt gelmeden ikinci istek başlamaz');
   firstResponse.resolve();
@@ -194,12 +196,16 @@ test('load ve next aynı anda tek istek atar, aralarında 1500 ms beklenir', asy
 
 test('load sürmekte olan next ile aynı sayfayı isterse ikinci istek atılmaz', async () => {
   const requests = [];
+  const response = deferred();
   const { source } = makeSource(async (url) => {
     requests.push(url);
+    await response.promise;
     return ok(pageBody(2, 5));
   });
   const fromNext = source.next();
+  await flush(); // next'in isteği uçuşta
   const fromLoad = source.load(2);
+  response.resolve();
   const [nextResult, loadResult] = await Promise.all([fromNext, fromLoad]);
   assert.equal(nextResult.page, 2);
   assert.equal(loadResult.page, 2);
@@ -267,6 +273,7 @@ test('kapatılan oturumun uçuştaki isteği beklenir, sıradaki işi istek atma
   };
   const closed = open(fetch, { count: 9 });
   const inFlight = assert.rejects(closed.next(), { name: 'AbortError' });
+  await flush(); // next'in isteği uçuşta
   const queued = assert.rejects(closed.load(7), { name: 'AbortError' });
   await flush();
   closed.dispose();
@@ -371,6 +378,107 @@ test('hak beklerken kapatılınca istek atılmaz ve hak harcanmaz', async () => 
   assert.equal((await open(fetch, { count: 12 }).next()).page, 2);
   assert.equal(requests.length, 7);
   assert.deepEqual(clock.sleeps, [1500, 1500, 1500, 1500, 1500, 1500, 1000], 'hak harcanmadığı için yeni oturum beklemez');
+});
+
+test('sayfa atlama sırası gelmemiş önden okumayı istek atmadan düşürür', async () => {
+  const requests = [];
+  const { source, clock } = makeSource(async (url) => {
+    requests.push(url);
+    return ok(pageBody(Number(new URL(url).searchParams.get('p')), 9));
+  }, { count: 9 });
+  const stale = assert.rejects(source.next(), { name: 'AbortError' });
+  assert.equal((await source.load(7)).page, 7);
+  await stale;
+  assert.deepEqual(requests, [`${TOPIC_URL}?p=7`], 'eski önden okuma istek atmaz');
+  assert.deepEqual(clock.sleeps, []);
+});
+
+test('sayfa atlama hak bekleyen önden okumayı istek atmadan düşürür', async () => {
+  const clock = { t: 0, sleeps: [] };
+  let creditSignal;
+  // 1000 ms'lik hak beklemesi kendiliğinden bitmez; yalnızca iptal edilince biter.
+  const sleep = (ms, signal) => {
+    clock.sleeps.push(ms);
+    if (ms !== 1000) {
+      clock.t += ms;
+      return Promise.resolve();
+    }
+    creditSignal = signal;
+    return new Promise((resolve) => signal?.addEventListener('abort', resolve, { once: true }));
+  };
+  const queue = createPageQueue({ now: () => clock.t, sleep });
+  const requests = [];
+  const source = createPageSource({
+    fetch: async (url) => {
+      requests.push(url);
+      return ok(pageBody(Number(new URL(url).searchParams.get('p')), 12));
+    },
+    parseHtml,
+    baseUrl: TOPIC_URL,
+    current: 1,
+    count: 12,
+    queue,
+    sleep,
+  });
+  for (let i = 0; i < 6; i += 1) await source.next();
+  const waiting = assert.rejects(source.next(), { name: 'AbortError' });
+  await flush();
+  assert.ok(creditSignal, 'hak beklemesi iptal edilebilir');
+
+  const jumped = source.load(9);
+  assert.equal(creditSignal.aborted, true, 'sayfa atlama hak beklemesini keser');
+  assert.equal((await jumped).page, 9);
+  await waiting;
+  assert.deepEqual(requests.slice(6), [`${TOPIC_URL}?p=9`], 'hak bekleyen önden okuma istek atmaz');
+  assert.equal((await source.next()).page, 10);
+  assert.deepEqual(clock.sleeps, [1500, 1500, 1500, 1500, 1500, 1500, 1000, 1500], 'düşen okuma hak harcamaz');
+});
+
+test('sayfa atlama aralık bekleyen önden okumayı hak beklemeden düşürür', async () => {
+  const clock = { t: 0, sleeps: [] };
+  let holdGap = false;
+  let releaseGap = null;
+  // İstenince bir 1500 ms'lik aralık beklemesi elle bırakılana kadar sürer.
+  const sleep = (ms) => {
+    clock.sleeps.push(ms);
+    if (holdGap && ms === 1500) {
+      holdGap = false;
+      return new Promise((resolve) => {
+        releaseGap = () => {
+          clock.t += ms;
+          resolve();
+        };
+      });
+    }
+    clock.t += ms;
+    return Promise.resolve();
+  };
+  const queue = createPageQueue({ now: () => clock.t, sleep });
+  const requests = [];
+  const source = createPageSource({
+    fetch: async (url) => {
+      requests.push(url);
+      return ok(pageBody(Number(new URL(url).searchParams.get('p')), 12));
+    },
+    parseHtml,
+    baseUrl: TOPIC_URL,
+    current: 1,
+    count: 12,
+    queue,
+    sleep,
+  });
+  for (let i = 0; i < 6; i += 1) await source.next();
+  holdGap = true;
+  const waiting = assert.rejects(source.next(), { name: 'AbortError' });
+  await flush();
+  assert.ok(releaseGap, 'yedinci önden okuma aralık bekliyor');
+
+  const jumped = source.load(9);
+  releaseGap();
+  assert.equal((await jumped).page, 9);
+  await waiting;
+  assert.deepEqual(requests.slice(6), [`${TOPIC_URL}?p=9`], 'aralık bekleyen önden okuma istek atmaz');
+  assert.deepEqual(clock.sleeps, [1500, 1500, 1500, 1500, 1500, 1500], 'düşen okuma aralıktan sonra hak beklemez');
 });
 
 test("sistem saati geri alınsa da aralık beklemesi 1500 ms'yi geçmez", async (t) => {
