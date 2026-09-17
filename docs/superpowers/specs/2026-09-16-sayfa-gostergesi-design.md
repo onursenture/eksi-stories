@@ -1,13 +1,13 @@
 # sayfa göstergesi, sayaç ve avatar: tasarım
 
 Tarih: 2026-09-16
-Durum: Onaylandı. Plan yazılırken §5, §6 ve §9 netleştirildi: tampondaki görselsiz sayfalar, aynı sayfanın iki kez istenmemesi, odak ve başarısız atlama.
+Durum: Onaylandı. Plan yazılırken §5, §6 ve §9 netleştirildi: tampondaki görselsiz sayfalar, aynı sayfanın iki kez istenmemesi, odak ve başarısız atlama. 17.09.2026: kullanıcı isteğiyle sayfa göstergesi ekranın orta altına taşındı (§1, §2, §5, §8, §10).
 
 ## 1. Kararlar
 
 - **Sayaç:** story üst barındaki "sayfa N/M" yerine sayfa içi sayaç gelir: `k/n`. `n` o sayfanın tampondaki görsel sayısı, `k` o sayfadaki kaçıncı görsel olduğu. Sonraki sayfaya geçince 1'den başlar.
-- **Sayfa göstergesi:** ekşi sözlük'ün koyu temadaki sayfa göstergesi birebir kopyalanıp story ekranının sağ üstüne konur ve sayfa değiştirmeyi sağlar.
-- **Yerleşim:** gösterge için ekranın en üstünde şerit ayrılır; story'ler şeridin altına yerleşir. Tek sayfalı başlıkta gösterge ve şerit yoktur.
+- **Sayfa göstergesi:** ekşi sözlük'ün koyu temadaki sayfa göstergesi birebir kopyalanıp story ekranının orta altına konur ve sayfa değiştirmeyi sağlar (kullanıcı isteği, 17.09.2026; ilk tasarımda sağ üstteydi).
+- **Yerleşim:** gösterge için ekranın en altında şerit ayrılır; story'ler şeridin üstüne yerleşir. Göstergenin üstünde ve altında eşit, 20 px boşluk olur. Tek sayfalı başlıkta gösterge ve şerit yoktur.
 - **Kapatma:** son bakılan entry açılan sayfadaysa ona kayılır; değilse ekşi'nin `focusto` adresiyle o entry'ye gidilir.
 - **Yaklaşım:** sayfa kaynağı istenen sayfayı yükleyebilir hale gelir, story akışı sayfa atlamayı yönetir. İstek kuralları tek yerde kalır.
 - **Avatar:** story üst barında yazar adının solunda avatar durur ("avatar - isim").
@@ -20,7 +20,7 @@ Durum: Onaylandı. Plan yazılırken §5, §6 ve §9 netleştirildi: tampondaki 
 - §3 ve §5 "geri gitme yalnızca tampon içinde" aynen geçerli. Sayfa atlandığında tampon hedef sayfadan yeniden başlar.
 - §4 veri modeli: `Entry`'ye `avatarUrl: string` eklenir. `createPageSource` sonucuna `load(page)` eklenir. `createStoryFeed` sonucuna `goToPage(page)` ve yeni `state` alanları eklenir.
 - §5 kapatma: "son izlenen entry mevcut DOM'daysa ona kaydırılır" korunur; DOM'da değilse `focusto` adresine gidilir.
-- §6 üst bar: "sayfa N/M" kalkar, yerine sayaç gelir; yazar adının soluna avatar eklenir. Sağ üstte sayfa göstergesi ve üst şerit eklenir.
+- §6 üst bar: "sayfa N/M" kalkar, yerine sayaç gelir; yazar adının soluna avatar eklenir. Orta altta sayfa göstergesi ve alt şerit eklenir.
 
 ## 3. Entry avatarı
 
@@ -56,21 +56,22 @@ Gerçek örnekler:
 ### Görünürlük ve şerit
 
 - `state.pageCount > 1` ise gösterge görünür ve `.es-root` öğesine `has-pager` sınıfı eklenir; değilse ikisi de yoktur.
-- Şerit yüksekliği CSS değişkeni: `--es-strip: 51px` (12 px boşluk + 27 px gösterge + 12 px boşluk). `has-pager` yoksa `--es-strip: 0px`.
-- `.es-stage` `top: var(--es-strip)` ile başlar.
+- Şerit yüksekliği CSS değişkeni: `--es-strip: 67px` (20 px boşluk + 27 px gösterge + 20 px boşluk). `has-pager` yoksa `--es-strip: 0px`.
+- `.es-stage` şeridin üstünde biter: `inset: 0 0 var(--es-strip)`.
 - `.es-image` `max-height: calc(100vh - var(--es-strip))` olur.
 - `.es-frame.is-loading` yer tutucusu: `height: calc(100vh - var(--es-strip))`, `width: min(100vw, calc((100vh - var(--es-strip)) * 9 / 16))`.
+- `.es-toast` şeridin üstünde durur: `bottom: calc(var(--es-strip) + 24px)`.
 - Bulanık arka plan (`.es-backdrop`) ekranın tamamını kaplamaya devam eder.
 
 ### Yapı
 
-`.es-root` içinde, `.es-stage` ile kardeş: `div.es-pager`, `position: absolute; top: 12px; right: 12px`. Çocuklar sırayla:
+`.es-root` içinde, `.es-stage` ile kardeş: `div.es-pager`, `position: absolute; bottom: 0; left: 50%; height: var(--es-strip); transform: translateX(-50%)`. İçerik şeridin dikey ortasındadır; üstte ve altta eşit boşluk kalır. Çocuklar sırayla:
 
-1. `button.es-pager-prev` `type="button" title="önceki sayfa"`, yazı `«`. Yalnızca `page > 1` iken vardır.
+1. `button.es-pager-prev` `type="button" title="önceki sayfa"`, yazı `«`. Yalnızca `page > 1` iken görünür; değilse yeri boş kalır (`visibility: hidden`), böylece seçim kutusu ve `»` yerinden oynamaz.
 2. `select.es-pager-select` `aria-label="sayfa"`, 1'den `pageCount`'a kadar `option`; seçili değer `page`.
 3. `span.es-pager-sep`, yazı `/`.
 4. `button.es-pager-last` `type="button" title="son sayfa"`, yazı `pageCount`.
-5. `button.es-pager-next` `type="button" title="sonraki sayfa"`, yazı `»`. Yalnızca `page < pageCount` iken vardır.
+5. `button.es-pager-next` `type="button" title="sonraki sayfa"`, yazı `»`. Yalnızca `page < pageCount` iken görünür; değilse yeri boş kalır.
 
 `option` listesi yalnızca `pageCount` değiştiğinde yeniden kurulur (22 binden fazla sayfalı başlıklar olabilir); diğer güncellemelerde yalnızca `select.value` değişir.
 
@@ -160,14 +161,14 @@ Yeni `state` alanları:
 - `- her görselde yazar, tarih ve entry'ye git linki var.` → `- her görselde yazarın avatarı ve adı, tarih ve entry'ye git linki var.`
 - Bu maddenin ardına üç madde eklenir:
   - `- üstte o sayfada kaçıncı görselde olduğun yazar, mesela 5/12.`
-  - `- sağ üstteki sayfa kutusuyla ekşi'deki gibi sayfa değiştirebilirsin.`
+  - `- alttaki sayfa kutusuyla ekşi'deki gibi sayfa değiştirebilirsin.`
   - `- kapatınca son baktığın entry'ye gider.`
 
-"kısayollar" tablosunda `| kapat | esc ya da ✕ |` satırından önce: `| sayfa değiştir | sağ üstteki sayfa kutusu, « ya da » |`
+"kısayollar" tablosunda `| kapat | esc ya da ✕ |` satırından önce: `| sayfa değiştir | alttaki sayfa kutusu, « ya da » |`
 
 "elle test" listesinde `- [ ] kapatınca son bakılan entry sayfadaysa oraya kayıyor.` satırının ardına:
 - `- [ ] başka sayfadayken kapatınca son bakılan entry açılıyor.`
-- `- [ ] çok sayfalı başlıkta sağ üstte ekşi'deki gibi sayfa kutusu var, sayfa değişiyor.`
+- `- [ ] çok sayfalı başlıkta altta ekşi'deki gibi sayfa kutusu var, sayfa değişiyor.`
 - `- [ ] sayaç sayfa içinde doğru sayıyor, sonraki sayfada 1'den başlıyor.`
 - `- [ ] avatarlar görünüyor, avatarı olmayan yazarda varsayılan çizim var.`
 
@@ -178,7 +179,7 @@ Açıklamada `• her görselde yazar, tarih ve entry'ye git linki var.` satır�
 ```
 • her görselde yazarın avatarı ve adı, tarih ve entry'ye git linki var.
 • üstte o sayfada kaçıncı görselde olduğun yazar, mesela 5/12.
-• sağ üstten istediğin sayfaya geç.
+• alttaki sayfa kutusundan istediğin sayfaya geç.
 • kapatınca son baktığın entry'ye gidersin.
 ```
 
@@ -197,7 +198,7 @@ Gizlilik formunda `açıklama: entry yazıları, yazar adları, tarihler ve gör
 0.1.0 altındaki tek madde şu satırla değişir:
 
 ````markdown
-- ilk sürüm. başlıklarda story butonu, görselleri kırpmadan tam ekran açan story ekranı, sonraki sayfalara yavaş geçiş, sağ üstte ekşi'deki gibi sayfa kutusu, sayfa içi sayaç, ekşi görselleri (`soz.lk`, `/img`) ve direkt görsel linkleri, her görselde avatar, yazar, tarih ve entry linki, kapatınca son bakılan entry'ye dönüş.
+- ilk sürüm. başlıklarda story butonu, görselleri kırpmadan tam ekran açan story ekranı, sonraki sayfalara yavaş geçiş, altta ekşi'deki gibi sayfa kutusu, sayfa içi sayaç, ekşi görselleri (`soz.lk`, `/img`) ve direkt görsel linkleri, her görselde avatar, yazar, tarih ve entry linki, kapatınca son bakılan entry'ye dönüş.
 ````
 
 ### Önceki spec'e not
@@ -219,8 +220,8 @@ Gizlilik formunda `açıklama: entry yazıları, yazar adları, tarihler ve gör
   - `makeEntry` her entry'ye üretilmiş bir avatar verir: tek harfli, renkli, yuvarlak SVG data adresi. Ekşi'ye istek atılmaz.
   - "en-boy oranları" senaryosu altı şekli üç sayfaya böler (her sayfada iki şekil, sıra aynı).
 - Store ekran görüntüleri yeniden çekilir:
-  - `01-dikey.png`: senaryo 0, sayfa 1, ilk story; sağ üstte `[1 ⌄] / 3 »`, sayaç `1/2`, avatar - isim.
-  - `02-panorama.png`: senaryo 0, panorama (sayfa 2'nin ikinci story'si); sağ üstte `« [2 ⌄] / 3 »`, sayaç `2/2`.
+  - `01-dikey.png`: senaryo 0, sayfa 1, ilk story; orta altta `[1 ⌄] / 3 »`, sayaç `1/2`, avatar - isim.
+  - `02-panorama.png`: senaryo 0, panorama (sayfa 2'nin ikinci story'si); orta altta `« [2 ⌄] / 3 »`, sayaç `2/2`.
   - `03-coklu-gorsel.png`: senaryo 1, ilk story; gösterge yok, sayaç `1/4`.
 
 ## 11. Doğrulama

@@ -12,6 +12,8 @@
 
 ## Global Constraints
 
+> Not (kullanıcı isteği, 17.09.2026): sayfa göstergesi ekranın orta altına taşındı; şerit alttan `--es-strip: 67px` (20 + 27 + 20), « ve » yoksa yerleri boş kalır. Güncel değerler spec §5'te.
+
 - İstek kuralları değişmez: sayfa istekleri arası en az 1500 ms; aynı anda tek sayfa isteği (`load` ve `next` dahil); 429/5xx/ağ hatasında 5000 ms sonra bir tekrar; art arda 5 görselsiz sayfada durma. Sayfa atlamada hedef sayfa boş sayfa sayacına dahil edilmez.
 - Tek sayfalı başlıkta (`pageCount <= 1`) sayfa göstergesi ve üst şerit yoktur; görseller tam yüksekliği kullanır.
 - Üst şerit: `--es-strip: 51px` (12 + 27 + 12). Gösterge `top: 12px; right: 12px`.

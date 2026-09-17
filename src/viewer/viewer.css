@@ -20,8 +20,9 @@
   -webkit-user-select: none;
 }
 
+/* Sayfa kutusu için alttan ayrılan şerit: 20px boşluk + kutu + 20px boşluk. */
 .es-root.has-pager {
-  --es-strip: 51px;
+  --es-strip: 67px;
 }
 
 .es-backdrop {
@@ -41,7 +42,7 @@
 
 .es-stage {
   position: absolute;
-  inset: var(--es-strip) 0 0;
+  inset: 0 0 var(--es-strip);
   display: grid;
   place-items: center;
   touch-action: none;
@@ -302,18 +303,26 @@
   outline-offset: 2px;
 }
 
-/* ekşi sözlük koyu tema sayfa göstergesi, ölçüm 16.09.2026 */
+/* ekşi sözlük koyu tema sayfa göstergesi, ölçüm 16.09.2026. Ekranın orta altında, şeridin dikey ortasında durur. */
 .es-pager {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  bottom: 0;
+  left: 50%;
   display: flex;
   align-items: center;
+  height: var(--es-strip);
   color: rgb(102, 102, 102);
   font-family: "Source Sans Pro", sans-serif;
   font-size: 14px;
   line-height: 22.652px;
   white-space: nowrap;
+  transform: translateX(-50%);
+}
+
+/* « ya da » yoksa yeri boş kalır; seçim kutusu ve » her sayfada aynı yerde durur. */
+.es-pager > [hidden] {
+  display: block !important;
+  visibility: hidden;
 }
 
 .es-pager-select {
@@ -362,7 +371,7 @@
 
 .es-toast {
   position: absolute;
-  bottom: 24px;
+  bottom: calc(var(--es-strip) + 24px);
   left: 50%;
   padding: 8px 14px;
   border-radius: 999px;

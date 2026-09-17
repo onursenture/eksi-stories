@@ -23,7 +23,7 @@ görsel paylaşılan başlıkları sayfa sayfa gezmek yerine story gibi izle.
 • görseller kırpılmaz, her biri kendi oranında görünür.
 • her görselde yazarın avatarı ve adı, tarih ve entry'ye git linki var.
 • üstte o sayfada kaçıncı görselde olduğun yazar, mesela 5/12.
-• sağ üstten istediğin sayfaya geç.
+• alttaki sayfa kutusundan istediğin sayfaya geç.
 • kapatınca son baktığın entry'ye gidersin.
 
 kısayollar: → ← ile geç, boşlukla ya da basılı tutarak durdur, esc ile kapat.

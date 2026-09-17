@@ -12,7 +12,7 @@ ekşi sözlük başlıklarındaki görselleri story gibi izlemek için chrome ek
 - görselleri kırpmaz. dikey, yatay, panorama, ekran görüntüsü, hepsi kendi oranında.
 - her görselde yazarın avatarı ve adı, tarih ve entry'ye git linki var.
 - üstte o sayfada kaçıncı görselde olduğun yazar, mesela 5/12.
-- sağ üstteki sayfa kutusuyla ekşi'deki gibi sayfa değiştirebilirsin.
+- alttaki sayfa kutusuyla ekşi'deki gibi sayfa değiştirebilirsin.
 - kapatınca son baktığın entry'ye gider.
 - ekşi görsellerini (`soz.lk/i/…`, `eksisozluk.com/img/…`) ve `.jpg`, `.png`, `.gif`, `.webp` linklerini açar.
 
@@ -23,7 +23,7 @@ ekşi sözlük başlıklarındaki görselleri story gibi izlemek için chrome ek
 | sonraki / önceki | → / ← ya da ekranın sağına / soluna tıkla |
 | durdur | basılı tut ya da boşluk |
 | entry'nin tamamı | alttaki yazıya tıkla |
-| sayfa değiştir | sağ üstteki sayfa kutusu, « ya da » |
+| sayfa değiştir | alttaki sayfa kutusu, « ya da » |
 | kapat | esc ya da ✕ |
 
 ## kurulum
@@ -85,7 +85,7 @@ playground ekşi'ye hiç istek atmadan sahte görsellerle açılır: `?scenario=
 - [ ] pencere boyu değişince yazılar görselin kenarlarına oturuyor.
 - [ ] kapatınca son bakılan entry sayfadaysa oraya kayıyor.
 - [ ] başka sayfadayken kapatınca son bakılan entry açılıyor.
-- [ ] çok sayfalı başlıkta sağ üstte ekşi'deki gibi sayfa kutusu var, sayfa değişiyor.
+- [ ] çok sayfalı başlıkta altta ekşi'deki gibi sayfa kutusu var, sayfa değişiyor.
 - [ ] sayaç sayfa içinde doğru sayıyor, sonraki sayfada 1'den başlıyor.
 - [ ] avatarlar görünüyor, avatarı olmayan yazarda varsayılan çizim var.
 - [ ] devtools network'te sayfa istekleri arası en az 1,5 sn.
