@@ -18,7 +18,7 @@
 - `createPageSource` için `queue` zorunludur; varsayılan bir iç sıra yazılmaz.
 - `src/core/story-feed.js`, `src/viewer/*`, `dev/playground.js` kodu değişmez.
 - README, PRIVACY, `store/` yazıları ve CHANGELOG değişmez.
-- Kod yorumları ve test adları Türkçedir, küçük harfle başlar; dosyaların mevcut yorum yoğunluğu korunur.
+- Kod yorumları ve test adları Türkçedir. Test adları küçük harfle başlar; yorumlar dosyadaki mevcut yorumların üslubunu (cümle başı büyük harf) ve yoğunluğunu izler.
 - Commit mesajları şu satırla biter: `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`. Kullanıcıya sormadan push yapılmaz.
 
 ## Dosya haritası
