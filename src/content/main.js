@@ -1,12 +1,14 @@
 import { isTopicPage, parseTopicPage } from '../core/entry-parser.js';
 import { createResolver } from '../core/image-resolver.js';
-import { createPageQueue, createPageSource } from '../core/page-source.js';
+import { buildPageUrl, createPageQueue, createPageSource } from '../core/page-source.js';
 import { createStoryFeed } from '../core/story-feed.js';
 import { openViewer } from '../viewer/viewer.js';
 
 const BUTTON_CLASS = 'eksi-stories-button';
 const TOPIC_PATH = /^\/(?:[^/]+--\d+|entry\/\d+)\/?$/;
 const SVG_NS = 'http://www.w3.org/2000/svg';
+/** Kapatınca açılan sayfada kaydırılacak entry: `#eksi-stories-<entry id>`. Adresin bu kısmı sunucuya gitmez. */
+const ENTRY_HASH_PREFIX = '#eksi-stories-';
 
 /**
  * Content script giriş noktası; loader.js çağırır. chrome.* API'sine bağımlı değildir.
@@ -26,6 +28,7 @@ export async function main({
     }
     return;
   }
+  focusMarkedEntry(doc);
   const title = doc.querySelector('#title[data-id]');
   if (title.querySelector(`.${BUTTON_CLASS}`)) return;
 
@@ -52,11 +55,12 @@ export async function main({
         cssText,
         resolver,
         pageQueue,
-        onClose: (lastEntryId) => {
+        onClose: (lastEntryId, lastPage) => {
           open = false;
           if (lastEntryId && !scrollToEntry(doc, lastEntryId)) {
-            // Entry başka sayfada: ekşi o entry'nin sayfasını açıp ona kaydırır.
-            navigate(`${doc.location.origin}${doc.location.pathname}?focusto=${encodeURIComponent(lastEntryId)}`);
+            // Entry başka sayfada: story'nin okunduğu sayfa açılır, entry'ye orada kaydırılır.
+            // ekşi'nin focusto'su başlığın sonundaki yeni entry'lerde sayfayı bulamıyor (17.09.2026).
+            navigate(`${buildPageUrl(doc.location.href, lastPage)}${ENTRY_HASH_PREFIX}${encodeURIComponent(lastEntryId)}`);
             return;
           }
           button.focus({ preventScroll: true });
@@ -86,11 +90,11 @@ function startStories({ doc, fetchImpl, cssText, resolver, pageQueue, onClose })
     topic,
     cssText,
     doc,
-    onClose: (lastEntryId) => {
+    onClose: (lastEntryId, lastPage) => {
       feed.dispose();
       // Bu oturumun sıradaki sayfa işleri istek atmadan düşer; yeniden açılan oturum aynı sırada bekler.
       pageSource.dispose();
-      onClose(lastEntryId);
+      onClose(lastEntryId, lastPage);
     },
   });
   feed.start();
@@ -118,6 +122,15 @@ function createButton(doc, count) {
   svg.append(ring, dot);
   button.append(svg, doc.createTextNode(`story · ${count}`));
   return button;
+}
+
+/** Adreste entry işareti varsa entry'ye kaydırır ve işareti adresten siler; yeniden yüklemede tekrar kaydırılmaz. */
+function focusMarkedEntry(doc) {
+  const { hash, pathname, search } = doc.location;
+  if (!hash.startsWith(ENTRY_HASH_PREFIX)) return;
+  scrollToEntry(doc, decodeURIComponent(hash.slice(ENTRY_HASH_PREFIX.length)));
+  const { history } = doc.defaultView;
+  history.replaceState(history.state, '', `${pathname}${search}`);
 }
 
 /** Entry açık sayfadaysa ona kaydırır ve true döner. */

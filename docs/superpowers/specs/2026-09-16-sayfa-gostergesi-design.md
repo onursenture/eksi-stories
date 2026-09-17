@@ -11,7 +11,7 @@ Not: §5'teki `.es-toast` konumu 2026-09-17-kendiliginden-ilerleme-hizi-design.m
 - **Sayaç:** story üst barındaki "sayfa N/M" yerine sayfa içi sayaç gelir: `k/n`. `n` o sayfanın tampondaki görsel sayısı, `k` o sayfadaki kaçıncı görsel olduğu. Sonraki sayfaya geçince 1'den başlar.
 - **Sayfa göstergesi:** ekşi sözlük'ün koyu temadaki sayfa göstergesi birebir kopyalanıp story ekranının orta altına konur ve sayfa değiştirmeyi sağlar (kullanıcı isteği, 17.09.2026; ilk tasarımda sağ üstteydi).
 - **Yerleşim:** gösterge için ekranın en altında şerit ayrılır; story'ler şeridin üstüne yerleşir. Göstergenin üstünde ve altında eşit, 20 px boşluk olur. Tek sayfalı başlıkta gösterge ve şerit yoktur.
-- **Kapatma:** son bakılan entry açılan sayfadaysa ona kayılır; değilse ekşi'nin `focusto` adresiyle o entry'ye gidilir.
+- **Kapatma:** son bakılan entry açılan sayfadaysa ona kayılır; değilse entry'nin okunduğu sayfa açılır ve entry'ye kaydırılır (17.09.2026'da `focusto` yerine, bkz. §7).
 - **Yaklaşım:** sayfa kaynağı istenen sayfayı yükleyebilir hale gelir, story akışı sayfa atlamayı yönetir. İstek kuralları tek yerde kalır.
 - **Avatar:** story üst barında yazar adının solunda avatar durur ("avatar - isim").
 - Yeni metinler `docs/superpowers/specs/2026-09-16-eksi-dili-metinler-design.md` dil kurallarına uyar.
@@ -22,7 +22,7 @@ Not: §5'teki `.es-toast` konumu 2026-09-17-kendiliginden-ilerleme-hizi-design.m
 
 - §3 ve §5 "geri gitme yalnızca tampon içinde" aynen geçerli. Sayfa atlandığında tampon hedef sayfadan yeniden başlar.
 - §4 veri modeli: `Entry`'ye `avatarUrl: string` eklenir. `createPageSource` sonucuna `load(page)` eklenir. `createStoryFeed` sonucuna `goToPage(page)` ve yeni `state` alanları eklenir.
-- §5 kapatma: "son izlenen entry mevcut DOM'daysa ona kaydırılır" korunur; DOM'da değilse `focusto` adresine gidilir.
+- §5 kapatma: "son izlenen entry mevcut DOM'daysa ona kaydırılır" korunur; DOM'da değilse entry'nin okunduğu sayfaya gidilip entry'ye kaydırılır (§7).
 - §6 üst bar: "sayfa N/M" kalkar, yerine sayaç gelir; yazar adının soluna avatar eklenir. Orta altta sayfa göstergesi ve alt şerit eklenir.
 
 ## 3. Entry avatarı
@@ -141,10 +141,12 @@ Yeni `state` alanları:
 
 ## 7. Kapatma
 
-- `main.js` `onClose(lastEntryId)`:
+- `main.js` `onClose(lastEntryId, lastPage)` (`lastPage` son gösterilen story'nin `page` değeri):
   - `lastEntryId` yoksa hiçbir şey yapılmaz.
   - Entry açık sayfanın DOM'undaysa bugünkü gibi `scrollIntoView({ block: 'center' })` ve odak butona döner.
-  - Değilse: `navigate(`${doc.location.origin}${doc.location.pathname}?focusto=${lastEntryId}`)`.
+  - Değilse: `navigate(`${buildPageUrl(doc.location.href, lastPage)}#eksi-stories-${lastEntryId}`)`. Adres, story'nin okunduğu sayfa isteğiyle aynıdır (filtreler korunur, `focusto` silinir); `#` sonrası sunucuya gitmez.
+  - Açılan sayfada `main` adresteki `#eksi-stories-<entry id>` işaretini görürse entry'ye `scrollIntoView({ block: 'center' })` ile kaydırır ve işareti `history.replaceState` ile siler; yeniden yüklemede tekrar kaydırılmaz.
+- Neden `focusto` değil (17.09.2026 canlı ölçüm, "anın fotoğrafı", 2203 sayfa, sayfa başına 100 entry): başlığın sonundaki yeni entry'lerde `?focusto=<id>` ya hiç entry göstermeden "bu başlıkta aradığınız kriterlere uygun giriş bulunamadı." diyor (2203. sayfadaki entry'ler, 2202. sayfanın son entry'si) ya da yanlış sayfayı açıyor (2202. sayfanın ilk entry'si için 2203). Aynı entry'ler `?p=2202` ve `?p=2203` adreslerinde duruyor; eski entry'lerde (2. ve 1099. sayfa) `focusto` doğru çalışıyor.
 - `main` imzası: `main({ cssUrl, doc = document, fetchImpl, navigate = (url) => doc.defaultView.location.assign(url) })`. `navigate` testte sahte fonksiyonla değiştirilir.
 
 ## 8. Metinler

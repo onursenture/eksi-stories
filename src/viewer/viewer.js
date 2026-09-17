@@ -10,7 +10,7 @@ const INTERACTIVE_SELECTOR = 'a, button, .es-caption, .es-card';
 
 /**
  * Tam ekran story görüntüleyicisini açar. Durum feed'dedir; viewer yalnızca çizer ve girdi toplar.
- * @param {{ feed: object, topic: { title: string }, cssText: string, onClose?: (lastEntryId: string | null) => void, doc?: Document }} options
+ * @param {{ feed: object, topic: { title: string }, cssText: string, onClose?: (lastEntryId: string | null, lastPage: number | null) => void, doc?: Document }} options
  * @returns {{ close: () => void }}
  */
 export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
@@ -85,6 +85,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
   let imageLoaded = false;
   let failedShown = false;
   let lastEntryId = null;
+  let lastPage = null;
   let expanded = false;
   let cardKey = null;
   let pressTimer = null;
@@ -130,6 +131,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     failedText.hidden = true;
     failedText.textContent = '';
     lastEntryId = story.entry.id;
+    lastPage = story.page;
     image.removeAttribute('src');
     frame.classList.add('is-loading');
     avatar.hidden = false;
@@ -328,7 +330,7 @@ export function openViewer({ feed, topic, cssText, onClose, doc = document }) {
     image.onerror = null;
     host.remove();
     doc.documentElement.style.overflow = previousOverflow;
-    onClose?.(lastEntryId);
+    onClose?.(lastEntryId, lastPage);
   }
 
   stage.addEventListener('pointerdown', onPointerDown);

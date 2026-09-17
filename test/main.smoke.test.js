@@ -16,8 +16,8 @@ const pageEntries = (page) => [1, 2, 3, 4].map((n) => ({
   content: link(`https://soz.lk/i/p${page}n${n}`),
 }));
 
-function setup(entries, { count = 1, pages = {} } = {}) {
-  const dom = new JSDOM(topicPageHtml({ count, entries }), { url: PAGE_URL });
+function setup(entries, { count = 1, pages = {}, url = PAGE_URL } = {}) {
+  const dom = new JSDOM(topicPageHtml({ count, entries }), { url });
   const requests = [];
   const fetchImpl = async (url) => {
     requests.push(url);
@@ -176,7 +176,7 @@ test('çok sayfalı başlıkta sayfa kutusu görünür, » sonraki sayfayı aça
   assert.equal(shadow.querySelector('.es-counter').textContent, '1/4');
 });
 
-test('başka sayfadayken kapatınca son bakılan entry focusto adresiyle açılır', async () => {
+test("başka sayfadayken kapatınca son bakılan entry'nin sayfası entry işaretiyle açılır", async () => {
   const { dom, doc, fetchImpl } = setup(pageEntries(1), { count: 3, pages: { 2: pageEntries(2) } });
   const navigations = [];
   await main({ cssUrl: CSS_URL, doc, fetchImpl, navigate: (url) => navigations.push(url) });
@@ -188,7 +188,40 @@ test('başka sayfadayken kapatınca son bakılan entry focusto adresiyle açıl�
 
   dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape' }));
   assert.equal(doc.querySelector('eksi-stories-viewer'), null);
-  assert.deepEqual(navigations, [`${PAGE_URL}?focusto=201`]);
+  // ekşi'nin focusto'su başlığın sonundaki yeni entry'lerde sayfayı bulamıyor; story'nin okunduğu sayfa açılır.
+  assert.deepEqual(navigations, [`${PAGE_URL}?p=2#eksi-stories-201`]);
+});
+
+test("kapatınca açılan sayfa adresi filtreleri korur, focusto'yu siler", async () => {
+  const { dom, doc, fetchImpl } = setup(pageEntries(1), {
+    count: 3,
+    pages: { 2: pageEntries(2) },
+    url: `${PAGE_URL}?a=nice&focusto=101`,
+  });
+  const navigations = [];
+  await main({ cssUrl: CSS_URL, doc, fetchImpl, navigate: (url) => navigations.push(url) });
+  doc.querySelector('.eksi-stories-button').click();
+  await flush();
+  await flush();
+  doc.querySelector('eksi-stories-viewer').shadowRoot.querySelector('.es-pager-next').click();
+  for (let i = 0; i < 4; i += 1) await flush();
+
+  dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape' }));
+  assert.deepEqual(navigations, [`${PAGE_URL}?a=nice&p=2#eksi-stories-201`]);
+});
+
+test("entry işaretli adresle açılan sayfada entry'ye kaydırılır, işaret adresten silinir", async () => {
+  const { dom, doc, requests, fetchImpl } = setup(pageEntries(2), { count: 3, url: `${PAGE_URL}?p=2#eksi-stories-203` });
+  const scrolled = [];
+  dom.window.HTMLElement.prototype.scrollIntoView = function scrollIntoView(options) {
+    scrolled.push([this.getAttribute('data-id'), options?.block]);
+  };
+  await main({ cssUrl: CSS_URL, doc, fetchImpl });
+  await main({ cssUrl: CSS_URL, doc, fetchImpl });
+
+  assert.deepEqual(scrolled, [['203', 'center']], 'bir kez kaydırılır');
+  assert.equal(dom.window.location.href, `${PAGE_URL}?p=2`);
+  assert.deepEqual(requests, [], 'istek atılmaz');
 });
 
 test("açılış sayfasındaki entry'de kapatınca başka adrese gidilmez", async () => {
