@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { PageStructureError } from '../src/core/entry-parser.js';
 import { createStoryFeed } from '../src/core/story-feed.js';
-import { flush } from './helpers/async.js';
+import { deferred, flush } from './helpers/async.js';
 
 let entrySeq = 1000;
 const entry = (id, imageIds = []) => ({
@@ -464,4 +464,25 @@ test('sınır dışı sayfa numarası sayfa aralığına sıkıştırılır', as
   feed.goToPage(Number.NaN);
   await flush();
   assert.deepEqual(pageSource.loads, [5, 1]);
+});
+
+test('kapatıldıktan sonra reddedilen sayfa isteği hata durumu yaratmaz', async () => {
+  const background = deferred();
+  const jump = deferred();
+  const pageSource = { hasNext: () => true, next: () => background.promise, load: () => jump.promise };
+  const loading = createStoryFeed({ entries: [entry('1', ['a'])], page: 1, pageCount: 9, pageSource, resolver: fakeResolver() });
+  const jumping = createStoryFeed({ entries: [entry('2', ['b', 'c', 'd', 'e'])], page: 1, pageCount: 9, pageSource, resolver: fakeResolver() });
+  loading.start();
+  jumping.start();
+  jumping.goToPage(7);
+  assert.equal(loading.state.loading, true, 'arka planda sonraki sayfa isteniyor');
+  assert.equal(jumping.state.jumping, true, '7. sayfaya atlanıyor');
+
+  loading.dispose();
+  jumping.dispose();
+  background.reject(new DOMException('iptal', 'AbortError'));
+  jump.reject(new DOMException('iptal', 'AbortError'));
+  await flush();
+  assert.equal(loading.state.errorKind, null);
+  assert.equal(jumping.state.errorKind, null);
 });

@@ -2,6 +2,7 @@
 
 Tarih: 2026-09-16
 Durum: Onaylandı. Plan yazılırken §5, §6 ve §9 netleştirildi: tampondaki görselsiz sayfalar, aynı sayfanın iki kez istenmemesi, odak ve başarısız atlama. 17.09.2026: kullanıcı isteğiyle sayfa göstergesi ekranın orta altına taşındı (§1, §2, §5, §8, §10).
+Not: §6 sayfa kaynağının sırası ve istek aralığı 2026-09-17-ortak-istek-sirasi-design.md ile sekme başına ortak sıraya taşındı.
 
 ## 1. Kararlar
 

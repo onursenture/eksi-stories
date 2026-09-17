@@ -10,13 +10,15 @@ const SVG_NS = 'http://www.w3.org/2000/svg';
 
 /**
  * Content script giriş noktası; loader.js çağırır. chrome.* API'sine bağımlı değildir.
- * @param {{ cssUrl: string, doc?: Document, fetchImpl?: (url: string, init?: object) => Promise<Response>, navigate?: (url: string) => void }} options
+ * `pageQueue` sekmenin ortak sayfa isteği sırasıdır: story ekranı kapatılıp açılsa da aynı anda tek sayfa istenir.
+ * @param {{ cssUrl: string, doc?: Document, fetchImpl?: (url: string, init?: object) => Promise<Response>, navigate?: (url: string) => void, pageQueue?: ReturnType<typeof createPageQueue> }} options
  */
 export async function main({
   cssUrl,
   doc = document,
   fetchImpl = (url, init) => globalThis.fetch(url, init),
   navigate = (url) => doc.defaultView.location.assign(url),
+  pageQueue = createPageQueue(),
 }) {
   if (!isTopicPage(doc)) {
     if (TOPIC_PATH.test(doc.location.pathname)) {
@@ -49,6 +51,7 @@ export async function main({
         fetchImpl,
         cssText,
         resolver,
+        pageQueue,
         onClose: (lastEntryId) => {
           open = false;
           if (lastEntryId && !scrollToEntry(doc, lastEntryId)) {
@@ -66,7 +69,7 @@ export async function main({
   });
 }
 
-function startStories({ doc, fetchImpl, cssText, resolver, onClose }) {
+function startStories({ doc, fetchImpl, cssText, resolver, pageQueue, onClose }) {
   const { topic, page, entries } = parseTopicPage(doc);
   const parseHtml = (html) => new doc.defaultView.DOMParser().parseFromString(html, 'text/html');
   const pageSource = createPageSource({
@@ -75,7 +78,7 @@ function startStories({ doc, fetchImpl, cssText, resolver, onClose }) {
     baseUrl: doc.location.href,
     current: page.current,
     count: page.count,
-    queue: createPageQueue(),
+    queue: pageQueue,
   });
   const feed = createStoryFeed({ entries, page: page.current, pageCount: page.count, pageSource, resolver });
   openViewer({
@@ -85,6 +88,8 @@ function startStories({ doc, fetchImpl, cssText, resolver, onClose }) {
     doc,
     onClose: (lastEntryId) => {
       feed.dispose();
+      // Bu oturumun sıradaki sayfa işleri istek atmadan düşer; yeniden açılan oturum aynı sırada bekler.
+      pageSource.dispose();
       onClose(lastEntryId);
     },
   });

@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import { main } from '../src/content/main.js';
-import { flush } from './helpers/async.js';
+import { createPageQueue } from '../src/core/page-source.js';
+import { deferred, flush } from './helpers/async.js';
 import { imagePageHtml, link, topicPageHtml } from './helpers/eksi-html.js';
 
 const PAGE_URL = 'https://eksisozluk.com/deneme-basligi--1000001';
@@ -220,4 +221,61 @@ test('sayfa sayısı değişmedikçe seçim kutusunun seçenekleri yeniden kurul
   assert.equal(shadow.querySelector('.es-counter').textContent, '2/4');
   assert.equal(select.options.length, 3);
   assert.equal(select.options[0], firstOption);
+});
+
+test('kapatıp hemen yeniden açınca kapanan oturumun sayfası istenmez, sayfa istekleri üst üste binmez', async () => {
+  const { dom, doc, fetchImpl } = setup([pageEntries(1)[0]], { count: 9, pages: { 2: pageEntries(2), 7: pageEntries(7) } });
+  const clock = { t: 0, sleeps: [] };
+  const pageQueue = createPageQueue({
+    now: () => clock.t,
+    sleep: async (ms) => {
+      clock.sleeps.push(ms);
+      clock.t += ms;
+    },
+  });
+  const pageRequests = [];
+  const heldResponses = [];
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const slowFetch = async (url, init) => {
+    if (!url.startsWith(`${PAGE_URL}?`)) return fetchImpl(url, init);
+    pageRequests.push(url);
+    inFlight += 1;
+    maxInFlight = Math.max(maxInFlight, inFlight);
+    const held = deferred();
+    heldResponses.push(held);
+    await held.promise;
+    inFlight -= 1;
+    return fetchImpl(url, init);
+  };
+  const navigations = [];
+  await main({ cssUrl: CSS_URL, doc, fetchImpl: slowFetch, navigate: (url) => navigations.push(url), pageQueue });
+
+  doc.querySelector('.eksi-stories-button').click();
+  await flush();
+  await flush();
+  assert.deepEqual(pageRequests, [`${PAGE_URL}?p=2`], 'tek görselli sayfada sonraki sayfa arka planda istenir');
+
+  const select = doc.querySelector('eksi-stories-viewer').shadowRoot.querySelector('.es-pager-select');
+  select.value = '7';
+  select.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+  dom.window.dispatchEvent(new dom.window.KeyboardEvent('keydown', { key: 'Escape' }));
+  assert.equal(doc.querySelector('eksi-stories-viewer'), null);
+  doc.querySelector('.eksi-stories-button').click();
+  for (let i = 0; i < 4; i += 1) await flush();
+  assert.deepEqual(pageRequests, [`${PAGE_URL}?p=2`], 'eski yanıt gelmeden yeni sayfa isteği başlamaz');
+
+  heldResponses[0].resolve();
+  for (let i = 0; i < 4; i += 1) await flush();
+  assert.deepEqual(pageRequests, [`${PAGE_URL}?p=2`, `${PAGE_URL}?p=2`], 'yeni oturum sırayı devralır');
+  assert.deepEqual(clock.sleeps, [1500]);
+
+  heldResponses[1].resolve();
+  for (let i = 0; i < 4; i += 1) await flush();
+  assert.deepEqual(pageRequests, [`${PAGE_URL}?p=2`, `${PAGE_URL}?p=2`], 'kapanan oturumun 7. sayfası istenmez');
+  assert.equal(maxInFlight, 1);
+  assert.deepEqual(navigations, []);
+  const shadow = doc.querySelector('eksi-stories-viewer').shadowRoot;
+  assert.equal(shadow.querySelector('.es-author-name').textContent, 'sayfa 1 yazarı');
+  assert.equal(shadow.querySelector('.es-counter').textContent, '1/1');
 });

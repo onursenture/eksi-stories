@@ -3,6 +3,7 @@
 Tarih: 2026-09-14
 Durum: Onaylandı (brainstorming sonucu)
 Not: §5 kapatma ve §6 üst bar maddeleri 2026-09-16-sayfa-gostergesi-design.md ile güncellendi.
+Not: §4 `createPageSource` imzası 2026-09-17-ortak-istek-sirasi-design.md ile güncellendi: sayfa istekleri sekme başına ortak sırada, sayfa kaynağında `dispose()` var.
 
 ## 1. Amaç
 
