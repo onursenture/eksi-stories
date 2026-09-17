@@ -3,6 +3,7 @@
 Tarih: 2026-09-17
 Durum: Onaylandı (brainstorming sonucu). Plan yazılırken §5'teki test beklentisi netleştirildi. Son incelemeden sonra §2.1, §2.2 ve §7 düzeltildi: görseli açılmayan story gizli sekmede de atlanır ve sayfa isteyebilir.
 Not: §2.1 ve §7'de kapsam dışı bırakılan açılmayan görsel konusu 2026-09-17-acilmayan-gorsel-siniri-design.md ile ele alındı.
+Not: §2.1'de anlatılan, görseli açılmayan story'nin kendiliğinden atlanması 2026-09-17-kendiliginden-ilerleme-hizi-design.md ile kalktı.
 
 ## 1. Sorun
 

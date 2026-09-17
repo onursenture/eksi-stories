@@ -3,6 +3,7 @@
 Tarih: 2026-09-17
 Durum: Onaylandı (brainstorming sonucu).
 Not: §3 `createPageQueue`'nun varsayılan saati 2026-09-17-istek-sirasi-sinirlari-design.md ile `performance.now()` oldu; sekmeler arası sıra ve kapatınca yapılan `focusto` gezintisi aynı belgede gerekçesiyle kapsam dışı bırakıldı.
+Not: §3 `createPageQueue` ve §5 kapatma tablosu 2026-09-17-kendiliginden-ilerleme-hizi-design.md ile önden okuma haklarını da kapsar.
 
 ## 1. Sorun
 

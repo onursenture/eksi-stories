@@ -40,7 +40,7 @@ kod değişince `chrome://extensions` sayfasında eklentiyi yenile, sonra ekşi 
 
 - sadece kişisel kullanım için. reklam, ücret, ticari amaç yok.
 - senin tarayıcında, senin oturumunla çalışır. sadece zaten görebildiğin sayfaları okur.
-- siteyi yormaz: her sekmede sayfa istekleri arasında en az 1,5 saniye bekler, aynı anda tek sayfa ister, görsel sayfalarını en fazla ikişer açar, 5 sayfa boyunca görsel açılmazsa durur.
+- siteyi yormaz: her sekmede aynı anda tek sayfa ister, sayfa istekleri arasında en az 1,5 saniye bekler, sonraki sayfaları art arda 5 sayfadan sonra 5 saniyede bir okur, görsel sayfalarını en fazla ikişer açar, görsel açılmasa da 5 saniye bekler, 5 sayfa boyunca görsel açılmazsa durur.
 - sitenin yazılarına, reklamlarına, düzenine dokunmaz. sadece bir buton ve kapatınca kaybolan bir ekran ekler.
 - her görselde yazara ve entry'ye link verir.
 

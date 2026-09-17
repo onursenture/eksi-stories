@@ -2,6 +2,7 @@
 
 Tarih: 2026-09-17
 Durum: Onaylandı (brainstorming sonucu). Son incelemeden sonra §3, §8, §9 ve §10 düzeltildi: önde açık ekrandaki kalan risk ölçülen sayılarla yazıldı, hızlı geçişte kart çıkabileceği eklendi, tampondaki sayfaya geçiş için bir test eklendi.
+Not: §9'daki önde açık ekran riski 2026-09-17-kendiliginden-ilerleme-hizi-design.md ile ele alındı; §3 ve §7'deki "görsel açılmadı, geçildi" bildirimi aynı belgeyle kalktı.
 
 ## 1. Sorun
 
