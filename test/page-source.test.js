@@ -323,3 +323,19 @@ test('kapatıldıktan sonra next ve load istek atmadan reddedilir', async () => 
   await assert.rejects(source.next(), { name: 'AbortError' });
   assert.equal(calls, 1);
 });
+
+test("sistem saati geri alınsa da aralık beklemesi 1500 ms'yi geçmez", async (t) => {
+  const sleeps = [];
+  const queue = createPageQueue({
+    sleep: async (ms) => {
+      sleeps.push(ms);
+    },
+  });
+  const { signal } = new AbortController();
+  const realNow = Date.now;
+  await queue.run(() => queue.pace(signal), signal);
+  t.mock.method(Date, 'now', () => realNow() - 60 * 60 * 1000); // saat bir saat geri alınır
+  await queue.run(() => queue.pace(signal), signal);
+  assert.equal(sleeps.length, 1);
+  assert.ok(sleeps[0] > 0 && sleeps[0] <= 1500, `bekleme ${sleeps[0]} ms`);
+});

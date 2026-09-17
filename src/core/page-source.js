@@ -23,9 +23,10 @@ const defaultSleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 /**
  * Sekmedeki bütün sayfa isteklerinin ortak sırası: aynı anda tek iş, istek başlangıçları arasında en az `minGapMs`.
  * Story ekranı kapatılıp açılınca da kurallar sürsün diye sekme başına bir kez kurulur.
+ * Varsayılan saat monotondur: sistem saati geri alınsa da bekleme `minGapMs`'yi geçmez.
  * @returns {{ run: (job: () => Promise<any>, signal: AbortSignal) => Promise<any>, pace: (signal: AbortSignal) => Promise<void> }}
  */
-export function createPageQueue({ minGapMs = PAGE_MIN_GAP_MS, now = () => Date.now(), sleep = defaultSleep } = {}) {
+export function createPageQueue({ minGapMs = PAGE_MIN_GAP_MS, now = () => performance.now(), sleep = defaultSleep } = {}) {
   let tail = Promise.resolve();
   let lastRequestAt = Number.NEGATIVE_INFINITY;
 
