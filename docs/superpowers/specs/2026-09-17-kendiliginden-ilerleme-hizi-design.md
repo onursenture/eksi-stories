@@ -1,7 +1,7 @@
 # kendiliğinden ilerleme hızı: tasarım
 
 Tarih: 2026-09-17
-Durum: Onaylandı (brainstorming sonucu). Plan yazılırken, temiz kopyada denenen koda göre §5, §6 ve §10 netleştirildi: `görsel açılmadı` yazısı kutunun içinde duruyor; `walk` ile değişen sınır testleri dört; hak testi tavanı da sabitliyor; iki smoke testinin akışı kesinleşti; kapatma tablosu için eski spec'e yalnızca not düşülüyor.
+Durum: Onaylandı (brainstorming sonucu). Plan yazılırken, temiz kopyada denenen koda göre §5, §6 ve §10 netleştirildi: `görsel açılmadı` yazısı kutunun içinde duruyor; `walk` ile değişen sınır testleri dört; hak testi tavanı da sabitliyor; iki smoke testinin akışı kesinleşti; kapatma tablosu için eski spec'e yalnızca not düşülüyor. Son incelemeden sonra kullanıcı kararıyla §3, §5, §6, §8, §10 ve §12 güncellendi: sayfa atlama isteği gitmemiş önden okumayı düşürür, açılmayan story ekrandayken sıradaki görsel önden yüklenir, README'de "birkaç sayfadan sonra" yazar.
 
 ## 1. Sorun
 
@@ -77,6 +77,7 @@ Durdurulmuş ekranda, hiçbir görseli açılmayan 100 entry'lik başlıkta zinc
   - Sekmenin sayfa sırasında `EMPTY_PAGE_LIMIT` (5) hak var. Her "sonraki sayfa" isteği bir hak harcar, her `STORY_DURATION_MS`'de (5 sn) bir hak geri gelir. Hak yoksa istek, bir hak dolana kadar bekler.
   - 1,5 sn aralık ve aynı anda tek istek kuralları da geçerli kalır. Aralıklar sırasında da hak dolduğu için art arda ~6 sayfa hızlı gider, sonra 5 sn'de bir sayfaya inilir.
   - Sayfa atlama hak harcamaz: seçim kutusu, «, », son sayfa ve atlama hatasındaki `tekrar dene`.
+  - Sayfa atlama, isteği henüz gitmemiş önden okumayı düşürür: okuma istek atmaz ve hak harcamaz, hak bekliyorsa bekleme kesilir. Atlama isteği yine 1,5 sn aralığı bekler; uçuştaki istek kesilmez (kullanıcı kararı, 17.09.2026, son inceleme sonrası).
   - Hakları yalnızca zaman doldurur: kapatıp açmak ve `aramaya devam` doldurmaz (kullanıcı kararı, 17.09.2026).
   - Haklar mevcut iki sabite bağlanır, yeni sabit eklenmez (kullanıcı kararı, 17.09.2026).
 - **Açılmayan story'nin görünüşü** (kullanıcı kararı, 17.09.2026):
@@ -175,7 +176,7 @@ Hepsi §2.1'deki gibi, scratchpad'deki prototiplerle ölçüldü. Sayılar sayfa
   - süre dolunca mevcut `animationend` (`es-fill`) → `feed.next()` yolu geçişi yapar. Durdurma nedenleri (`is-paused`) bu çizgiyi de durdurur.
 - `showStory` yazıyı gizler.
 - `image.onload` ve `image.onerror` aynı kalır. `<img>` hatası `feed.markFailed(story)` çağırır; ardından `change` gelir ve story yukarıdaki duruma geçer. Ekşi görselinde `/img/` hatası da story akışı üzerinden aynı yere varır.
-- `preloadNext()` aynı kalır: sıradaki story açılmadıysa önden yüklenmez.
+- `preloadNext()` açılmayan story ekrandayken de çalışır: `render()` içinde `imageLoaded || failedShown` iken çağrılır ve sıradaki story hazırsa onu önden yükler. Sıradaki story açılmadıysa önden yüklenmez (kullanıcı kararı, 17.09.2026, son inceleme sonrası).
 - **Kalkanlar:**
   - `.es-toast` öğesi ve stili;
   - `showToast`, `toastTimer`, `feed.on('skipped', ...)`, `TOAST_MS` içe aktarımı;
@@ -194,7 +195,7 @@ export function createPageQueue({
   now = () => performance.now(),
   sleep = defaultSleep,
 } = {})
-// → { run(job, signal), pace(signal, { fetchAhead = false } = {}) }
+// → { run(job, signal), pace(signal, { fetchAhead = false, cancel = null } = {}) }
 ```
 
 - Haklar sırada tutulur, sekme başına tektir. Sıra kurulurken haklar doludur.
@@ -203,17 +204,19 @@ export function createPageQueue({
   - doldurma: `bütçe = Math.min(tavan, bütçe + (now() - sonDoldurma))`;
   - hak var demek `bütçe >= fetchAheadRefillMs` demek;
   - harcama: `bütçe -= fetchAheadRefillMs`.
-- **`pace(signal, { fetchAhead })` sırası:**
-  1. `lastRequestAt + minGapMs - now()` sıfırdan büyükse o kadar `sleep`.
-  2. `fetchAhead` ise bütçeyi doldurur. Hak yoksa `fetchAheadRefillMs - bütçe` kadar `sleep`.
-  3. `signal.throwIfAborted()`. İptal edildiyse hak harcanmaz, son istek anı değişmez.
+- **`pace(signal, { fetchAhead, cancel })` sırası:**
+  1. `lastRequestAt + minGapMs - now()` sıfırdan büyükse o kadar `sleep`. Bu bekleme hiçbir iptalle kısalmaz.
+  2. `fetchAhead` ise bütçeyi doldurur. Hak yoksa ve `cancel` iptal edilmemişse `fetchAheadRefillMs - bütçe` kadar `sleep(ms, cancel)`; `cancel` iptal edilince bu bekleme hemen biter.
+  3. `signal.throwIfAborted()` ve `cancel?.throwIfAborted()`. İptal edildiyse hak harcanmaz, son istek anı değişmez.
   4. `fetchAhead` ise bütçeyi doldurur ve bir hak harcar.
   5. `lastRequestAt = now()`.
 - `fetchAhead` verilmeyen `pace` bugünküyle aynıdır.
+- Varsayılan `sleep(ms, signal)`, `signal` iptal edilince hemen biter. Kapatma sinyali hiçbir `sleep`'e verilmez.
 - **`createPageSource`:**
   - `request(url, options)` → `queue.pace(signal, options)`;
   - `fetchPage(page, options)` ilk isteğe de tekrara da aynı seçeneği verir;
-  - `enqueue(pickPageFn, options)`: `next()` `{ fetchAhead: true }` verir, `load(page)` seçenek vermez;
+  - `enqueue(pickPageFn, options)`: `next()` her çağrıda yeni bir `AbortController` kurar ve `{ fetchAhead: true, cancel }` verir, `load(page)` seçenek vermez;
+  - `load(page)` önce son `next()`'in `cancel`'ını iptal eder. İsteği henüz gitmemiş önden okuma `AbortError` ile düşer, istek atmaz, hak harcamaz. İsteği gitmiş okuma etkilenmez; yanıtını story akışı atlama sayacıyla (`epoch`) yok sayar;
   - art arda aynı sayfa istenip son sonuç dönerse istek atılmaz ve hak harcanmaz.
 - **JSDoc** (`createPageQueue`), eklenecek cümle: "Önden okuma istekleri (`fetchAhead`) ayrıca hak harcar: `fetchAheadBurst` hak vardır, her `fetchAheadRefillMs`'de bir hak dolar, hak yoksa dolana kadar beklenir. Varsayılanlar sayfa sınırı ve story süresidir: tek bir görselsiz bölüm hızlı taranır, uzun zincir story süresinden hızlı sayfa istemez."
 - **Kapatma davranışı** (`2026-09-17-ortak-istek-sirasi-design.md` §5) şu satırla genişler. O spec'in gövdesi değişmez; başına not düşülür (§8):
@@ -235,7 +238,7 @@ export function createPageQueue({
 - **`README.md`, "kurallar" bölümündeki madde:**
 
   ```markdown
-  - siteyi yormaz: her sekmede aynı anda tek sayfa ister, sayfa istekleri arasında en az 1,5 saniye bekler, sonraki sayfaları art arda 5 sayfadan sonra 5 saniyede bir okur, görsel sayfalarını en fazla ikişer açar, görsel açılmasa da 5 saniye bekler, 5 sayfa boyunca görsel açılmazsa durur.
+  - siteyi yormaz: her sekmede aynı anda tek sayfa ister, sayfa istekleri arasında en az 1,5 saniye bekler, sonraki sayfaları art arda birkaç sayfadan sonra 5 saniyede bir okur, görsel sayfalarını en fazla ikişer açar, görsel açılmasa da 5 saniye bekler, 5 sayfa boyunca görsel açılmazsa durur.
   ```
 
 - README'nin "ne yapar" ve "elle test" bölümleri değişmez. Görseli açılmayan bir entry'yi canlıda bulmak güvenilir değil; playground (§9) karşılar.
@@ -247,7 +250,7 @@ export function createPageQueue({
   - `docs/superpowers/specs/2026-09-14-eksi-stories-design.md`:
 
     ```markdown
-    Not: §7'deki "otomatik atlanır" ve "grup atlanır" satırları ile §10'daki toast süresi 2026-09-17-kendiliginden-ilerleme-hizi-design.md ile değişti: açılmayan görsel atlanmaz, `görsel açılmadı` yazısıyla 5 sn gösterilir. §2.2 ve §5'teki önden okuma aynı belgeyle hakla sınırlandı.
+    Not: §7'deki "otomatik atlanır", "atla + toast" ve "grup atlanır" satırları ile §10'daki toast süresi 2026-09-17-kendiliginden-ilerleme-hizi-design.md ile değişti: açılmayan görsel atlanmaz, `görsel açılmadı` yazısıyla 5 sn gösterilir. §2.2 ve §5'teki önden okuma aynı belgeyle hakla sınırlandı.
     ```
 
   - `docs/superpowers/specs/2026-09-16-eksi-dili-metinler-design.md`:
@@ -353,6 +356,26 @@ Mevcut `istekler arasında en az 1500 ms beklenir` testi üç istek attığı i�
 
 Test sayısı 96'dan 97'ye çıkar.
 
+### Son inceleme sonrası (kullanıcı kararı, 17.09.2026)
+
+`test/page-source.test.js`:
+- Üç yeni test; üçü de bugünkü kodda başarısız olur:
+  - `sayfa atlama sırası gelmemiş önden okumayı istek atmadan düşürür`: aynı anda çağrılan `next()` `AbortError` ile düşer, yalnızca atlama sayfası istenir, bekleme olmaz.
+  - `sayfa atlama hak bekleyen önden okumayı istek atmadan düşürür`: haklar bitmişken 7. `next()` 1000 ms'lik hak beklemesindeyken `load(9)` çağrılır. Bekleme hemen kesilir, okuma istek atmaz; sonraki `next()` hak beklemeden gider, yani düşen okuma hak harcamamıştır.
+  - `sayfa atlama aralık bekleyen önden okumayı hak beklemeden düşürür`: `load(9)`, 7. `next()` 1500 ms'lik aralığı beklerken çağrılır. Aralık biter, sonra hak beklenmeden düşülür.
+- Üç test, `next()`'in isteği uçuşa çıktıktan sonra `load()` çağıracak şekilde kurulur; amaçları değişmez: `load ve next aynı anda tek istek atar, aralarında 1500 ms beklenir`, `load sürmekte olan next ile aynı sayfayı isterse ikinci istek atılmaz`, `kapatılan oturumun uçuştaki isteği beklenir, sıradaki işi istek atmadan düşer`.
+
+`test/main.smoke.test.js`:
+- `açılmayan görsel ekranda kalır, süresi dolunca sonraki story gelir` genişler:
+  - 1. sayfanın 4. görseli açılır (`acilan104`); 3. story açılmayan story olarak ekrandayken sıradaki görselin adresi önden yüklenir (görsel öğelerine atanan `src`'ler izlenir);
+  - ← ile açılmayan 2. story'ye dönülünce çizgi yeniden dolar.
+  - Önden yükleme beklentisi bugünkü kodda başarısız olur.
+- İki yeni test; ikisi de bugünkü kodda geçer ve kaybolan bağlantıları sabitler:
+  - `sekme gizlenince ekran durur, görününce sürer`;
+  - `görselsiz sayfalardan sonra kart çıkar, aramaya devam sonraki sayfaları hakla okur`: `?p=2` … `?p=6` 1,5 sn arayla gelir, kart çıkar; `aramaya devam` ile `?p=7` … `?p=11` hak desenini izler (`1500, 1500, 1000, 1500, 3500, 1500, 3500, 1500, 3500`).
+
+Test sayısı 97'den 102'ye çıkar.
+
 ## 11. Kapsam dışı
 
 - **429/5xx/ağ hatasında `/img/` sonucunu kalıcı önbelleğe almamak ve 429'da beklemek.** Bu tasarımdan sonra yüke etkisi yok, çünkü açılmayan görsel 5 sn sürer. Yalnızca kapatıp açınca görselin yeniden denenmesini sağlar. v0.2'de kalır.
@@ -364,7 +387,7 @@ Test sayısı 96'dan 97'ye çıkar.
 ## 12. Doğrulama
 
 1. 1, 2, 3, 5 ve 6. testler değişiklikten önce başarısız olur. 4 ve 7 bugünkü davranışı sabitler.
-2. Değişiklikten sonra `npm test` ile 97 test geçer.
+2. Değişiklikten sonra `npm test` ile 97 test geçer; son inceleme sonrası düzeltmelerden sonra 102 test geçer.
 3. Simülasyon betiği (planda) çalıştırılır. Sonuçlar şu değerlere yakın olur ve bütün senaryolarda sayfa istekleri arasında en az 1500 ms vardır:
 
    | durum | beklenen |

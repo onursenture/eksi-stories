@@ -19,6 +19,8 @@
 
 **Spec:** [docs/superpowers/specs/2026-09-17-kendiliginden-ilerleme-hizi-design.md](../specs/2026-09-17-kendiliginden-ilerleme-hizi-design.md)
 
+> Uygulama notu (son inceleme sonrası): kullanıcı kararıyla sayfa atlama isteği gitmemiş önden okumayı düşürür, açılmayan story ekrandayken sıradaki görsel önden yüklenir, README'de "birkaç sayfadan sonra" yazar. Kaybolan gizli sekme ve `aramaya devam` smoke testleri geri eklendi. Ayrıntılar spec §3, §5, §6, §8, §10 ve §12'de; test sayısı 102.
+
 > Plan kodu `ae2ccf0` üzerinde, repodan bağımsız temiz bir kopyada baştan sona denendi:
 > - Her kırmızı ve yeşil çıktı ile test sayıları gözlendi.
 > - Yeni ve değişen testlerin her biri, kodun ilgili satırı bilerek bozulunca düştü: story akışında 5, görüntüleyicide 8, sayfa sırasında 7 bozma denendi.
